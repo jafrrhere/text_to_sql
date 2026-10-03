@@ -1,0 +1,6 @@
+CREATE TABLE "Album" (
+    "AlbumId" INTEGER NOT NULL,
+    "Title" NVARCHAR(160) NOT NULL,
+    "ArtistId" INTEGER NOT NULL,
+    PRIMARY KEY("AlbumId")
+);
