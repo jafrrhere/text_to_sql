@@ -59,11 +59,7 @@ def _strip_not_given(d: dict) -> dict:
         omit_types = _get_omit_types()
         if not omit_types:
             return d
-        return {
-            k: v
-            for k, v in d.items()
-            if not (isinstance(v, omit_types) or (k.startswith("extra_") and v is None))
-        }
+        return {k: v for k, v in d.items() if not (isinstance(v, omit_types) or (k.startswith("extra_") and v is None))}
     except Exception as e:
         logger.error(f"Error stripping NotGiven: {e}")
         return d
@@ -127,9 +123,7 @@ def _infer_invocation_params(
     }
 
     # Only include allowlisted parameters
-    invocation_params = {
-        k: v for k, v in stripped.items() if k in allowed_invocation_keys
-    }
+    invocation_params = {k: v for k, v in stripped.items() if k in allowed_invocation_keys}
 
     if use_responses_api:
         invocation_params["use_responses_api"] = True
@@ -214,17 +208,11 @@ def _reduce_choices(choices: list[Choice]) -> dict:
                         message["tool_calls"][index]["function"]["name"] += name_
                     arguments_ = getattr(chunk.function, "arguments", None)
                     if arguments_:
-                        message["tool_calls"][index]["function"]["arguments"] += (
-                            arguments_
-                        )
+                        message["tool_calls"][index]["function"]["arguments"] += arguments_
     return {
         "index": getattr(choices[0], "index", 0) if choices else 0,
         "finish_reason": next(
-            (
-                c.finish_reason
-                for c in reversed_choices
-                if getattr(c, "finish_reason", None)
-            ),
+            (c.finish_reason for c in reversed_choices if getattr(c, "finish_reason", None)),
             None,
         ),
         "message": message,
@@ -238,17 +226,13 @@ def _reduce_chat(all_chunks: list[ChatCompletionChunk]) -> dict:
             choices_by_index[choice.index].append(choice)
     if all_chunks:
         d = all_chunks[-1].model_dump()
-        d["choices"] = [
-            _reduce_choices(choices) for choices in choices_by_index.values()
-        ]
+        d["choices"] = [_reduce_choices(choices) for choices in choices_by_index.values()]
     else:
         d = {"choices": [{"message": {"role": "assistant", "content": ""}}]}
     # streamed outputs don't go through `process_outputs`
     # so we need to flatten metadata here
     oai_token_usage = d.pop("usage", None)
-    d["usage_metadata"] = (
-        _create_usage_metadata(oai_token_usage) if oai_token_usage else None
-    )
+    d["usage_metadata"] = _create_usage_metadata(oai_token_usage) if oai_token_usage else None
     return d
 
 
@@ -283,9 +267,7 @@ def _process_chat_completion(outputs: Any):
         rdict = outputs.model_dump()
         oai_token_usage = rdict.pop("usage", None)
         rdict["usage_metadata"] = (
-            _create_usage_metadata(oai_token_usage, rdict.get("service_tier"))
-            if oai_token_usage
-            else None
+            _create_usage_metadata(oai_token_usage, rdict.get("service_tier")) if oai_token_usage else None
         )
         return rdict
     except BaseException as e:
@@ -425,9 +407,7 @@ def wrap_openai(
                 "content": "What physics breakthroughs do you predict will happen by 2300?",
             },
         ]
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini", messages=messages
-        )
+        completion = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
         print(completion.choices[0].message.content)
 
         # Responses API:
@@ -438,9 +418,7 @@ def wrap_openai(
         print(response.output_text)
 
         # With raw response to access headers:
-        raw_response = client.chat.completions.with_raw_response.create(
-            model="gpt-4o-mini", messages=messages
-        )
+        raw_response = client.chat.completions.with_raw_response.create(model="gpt-4o-mini", messages=messages)
         print(raw_response.headers)  # Access HTTP headers
         completion = raw_response.parse()  # Get parsed response
         ```
@@ -529,11 +507,7 @@ def wrap_openai(
         )
 
     # Wrap chat.completions.parse if it exists
-    if (
-        hasattr(client, "chat")
-        and hasattr(client.chat, "completions")
-        and hasattr(client.chat.completions, "parse")
-    ):
+    if hasattr(client, "chat") and hasattr(client.chat, "completions") and hasattr(client.chat.completions, "parse"):
         client.chat.completions.parse = _get_parse_wrapper(  # type: ignore[method-assign]
             client.chat.completions.parse,  # type: ignore
             chat_name,
@@ -595,9 +569,7 @@ def _process_responses_api_output(response: Any) -> dict:
 
             output = response.model_dump(exclude_none=True, mode="json")
             if usage := output.pop("usage", None):
-                output["usage_metadata"] = _create_usage_metadata(
-                    usage, output.get("service_tier")
-                )
+                output["usage_metadata"] = _create_usage_metadata(usage, output.get("service_tier"))
             return output
         except Exception:
             return {"output": response}

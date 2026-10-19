@@ -15,8 +15,8 @@ mean something else after a feature is renamed or retired.
 
 from __future__ import annotations
 
-import logging
 import os
+import logging
 
 logger = logging.getLogger(__name__)
 

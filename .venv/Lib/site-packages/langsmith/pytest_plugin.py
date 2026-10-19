@@ -34,9 +34,7 @@ def pytest_addoption(parser):
         )
     except ValueError:
         # Option already exists
-        logger.warning(
-            "LangSmith output flag cannot be added because it's already defined."
-        )
+        logger.warning("LangSmith output flag cannot be added because it's already defined.")
 
 
 def _handle_output_args(args):
@@ -76,9 +74,7 @@ def pytest_runtest_call(item):
         request_obj = getattr(item, "_request", None)
         if "experiment_metadata" not in kwargs and request_obj is not None:
             try:
-                experiment_metadata = request_obj.getfixturevalue(
-                    "langsmith_experiment_metadata"
-                )
+                experiment_metadata = request_obj.getfixturevalue("langsmith_experiment_metadata")
                 if experiment_metadata is not None:
                     kwargs = {**kwargs, "experiment_metadata": experiment_metadata}
             except pytest.FixtureLookupError:
@@ -124,9 +120,7 @@ class LangSmithPlugin:
         self.status_lock = Lock()  # Thread-safe updates
         self.console = Console()
 
-        self.live = Live(
-            self.generate_tables(), console=self.console, refresh_per_second=10
-        )
+        self.live = Live(self.generate_tables(), console=self.console, refresh_per_second=10)
         self.live.start()
         self.live.console.print("Collecting tests...")
 
@@ -139,9 +133,7 @@ class LangSmithPlugin:
             marker = item.get_closest_marker("langsmith")
             if marker:
                 self.langsmith_nodeids.add(item.nodeid)
-                test_suite = marker.kwargs.get("test_suite_name") or (
-                    _get_test_suite_name(item.obj)
-                )
+                test_suite = marker.kwargs.get("test_suite_name") or (_get_test_suite_name(item.obj))
                 self.add_process_to_test_suite(test_suite, item.nodeid)
 
     def add_process_to_test_suite(self, test_suite, process_id):
@@ -170,11 +162,7 @@ class LangSmithPlugin:
 
     def pytest_runtest_logreport(self, report):
         """Track setup failures and skips for LangSmith tests."""
-        if (
-            report.nodeid in self.langsmith_nodeids
-            and report.when == "setup"
-            and (report.failed or report.skipped)
-        ):
+        if report.nodeid in self.langsmith_nodeids and report.when == "setup" and (report.failed or report.skipped):
             status = "failed" if report.failed else "skipped"
             self.update_process_status(report.nodeid, {"status": status})
 
@@ -238,9 +226,7 @@ LangSmith URL: [bright_cyan]{self.test_suite_urls.get(suite_name, "--")}[/bright
         else:
             aggregate_duration = "--s"
         if numeric_feedbacks:
-            aggregate_feedback = "\n".join(
-                f"{k}: {sum(v) / len(v)}" for k, v in numeric_feedbacks.items()
-            )
+            aggregate_feedback = "\n".join(f"{k}: {sum(v) / len(v)}" for k, v in numeric_feedbacks.items())
         else:
             aggregate_feedback = "--"
 
@@ -262,17 +248,13 @@ LangSmith URL: [bright_cyan]{self.test_suite_urls.get(suite_name, "--")}[/bright
                 for k, v in status.get("feedback", {}).items()
             )
             inputs = _dumps_with_fallback(status.get("inputs", {}))
-            reference_outputs = _dumps_with_fallback(
-                status.get("reference_outputs", {})
-            )
+            reference_outputs = _dumps_with_fallback(status.get("reference_outputs", {}))
             outputs = _dumps_with_fallback(status.get("outputs", {}))
             table.add_row(
                 _abbreviate_test_name(str(pid), max_len=max_dynamic_col_width),
                 _abbreviate(inputs, max_len=max_dynamic_col_width),
                 _abbreviate(reference_outputs, max_len=max_dynamic_col_width),
-                _abbreviate(outputs, max_len=max_dynamic_col_width)[
-                    -max_dynamic_col_width:
-                ],
+                _abbreviate(outputs, max_len=max_dynamic_col_width)[-max_dynamic_col_width:],
                 f"[{status_color}]{status.get('status', 'queued')}[/{status_color}]",
                 feedback,
                 f"{duration:.2f}s",
@@ -311,9 +293,7 @@ LangSmith URL: [bright_cyan]{self.test_suite_urls.get(suite_name, "--")}[/bright
 
 def pytest_configure(config):
     """Register the 'langsmith' marker."""
-    config.addinivalue_line(
-        "markers", "langsmith: mark test to be tracked in LangSmith"
-    )
+    config.addinivalue_line("markers", "langsmith: mark test to be tracked in LangSmith")
     if config.getoption("--langsmith-output"):
         if not importlib.util.find_spec("rich"):
             msg = (

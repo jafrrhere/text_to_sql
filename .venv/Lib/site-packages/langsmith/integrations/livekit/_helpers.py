@@ -118,9 +118,7 @@ def extract_model_from_lk_metrics(metrics: Any) -> Optional[str]:
     """
     parsed = try_parse_json_object(metrics)
     if isinstance(parsed, dict):
-        return (parsed.get("metadata") or {}).get("model_name") or parsed.get(
-            "model_name"
-        )
+        return (parsed.get("metadata") or {}).get("model_name") or parsed.get("model_name")
     return None
 
 
@@ -173,9 +171,7 @@ def extract_realtime_usage(metrics: Any) -> dict[str, Any]:
     return usage
 
 
-def flatten_lk_attributes_to_ls_metadata(
-    obj: dict, prefix: str, _depth: int = 0
-) -> dict:
+def flatten_lk_attributes_to_ls_metadata(obj: dict, prefix: str, _depth: int = 0) -> dict:
     """Flatten a JSON-object blob's scalar leaves to ``{prefix_key: value}``.
 
     Recurses into nested dicts (capped at depth 4); keeps scalars and lists of
@@ -191,11 +187,7 @@ def flatten_lk_attributes_to_ls_metadata(
             flat.update(flatten_lk_attributes_to_ls_metadata(v, name, _depth + 1))
         elif isinstance(v, (str, int, float, bool)):
             flat[name] = v
-        elif (
-            isinstance(v, (list, tuple))
-            and v
-            and all(isinstance(item, (str, int, float, bool)) for item in v)
-        ):
+        elif isinstance(v, (list, tuple)) and v and all(isinstance(item, (str, int, float, bool)) for item in v):
             flat[name] = list(v)
     return flat
 
@@ -210,9 +202,7 @@ def build_message_from_event(role: str, event: Any) -> dict:
     attrs = event.attributes or {}
     content = str(attrs.get("content") or "")
     if role == "tool":
-        return build_tool_message(
-            content, tool_call_id=attrs.get("id"), name=attrs.get("name")
-        )
+        return build_tool_message(content, tool_call_id=attrs.get("id"), name=attrs.get("name"))
     msg: dict = {"role": role, "content": content}
     tool_calls = parse_tool_calls(attrs.get("tool_calls"))
     if tool_calls:
@@ -256,11 +246,7 @@ def build_messages_from_chat_history(chat_history: Any) -> list[dict]:
             if text:
                 messages.append({"role": role, "content": text})
         elif kind == "function_call":
-            messages.append(
-                build_assistant_tool_call_message(
-                    item["call_id"], item["name"], item["arguments"]
-                )
-            )
+            messages.append(build_assistant_tool_call_message(item["call_id"], item["name"], item["arguments"]))
         elif kind == "function_call_output":
             messages.append(
                 build_tool_message(

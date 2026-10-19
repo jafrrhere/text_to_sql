@@ -128,9 +128,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             **kwargs,
         )
         if recording_mode not in _RECORDING_MODES:
-            raise ValueError(
-                f"recording_mode must be one of {sorted(_RECORDING_MODES)!r}"
-            )
+            raise ValueError(f"recording_mode must be one of {sorted(_RECORDING_MODES)!r}")
         if recording_timeout_seconds <= 0:
             raise ValueError("recording_timeout_seconds must be greater than zero")
         self._audio_mime_type = audio_mime_type
@@ -152,9 +150,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         self._trace_by_thread: MutableMapping[str, int] = _cache()
         # ``expect_recording`` and ``complete_recording`` are legacy APIs that
         # may be called before LiveKit starts the first span for a conversation.
-        self._thread_state_waiting_for_trace: MutableMapping[
-            str, _PendingThreadState
-        ] = _cache()
+        self._thread_state_waiting_for_trace: MutableMapping[str, _PendingThreadState] = _cache()
         # Distinguish a genuinely early legacy delivery from one that arrived
         # after its trace was already exported (which must not leak into a later
         # conversation that reuses the same thread id).
@@ -169,27 +165,20 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
     def _get_or_create_state(self, trace_id: int) -> _ConversationState:
         state = self._get_state(trace_id)
         if state is not None:
-            self._associate_thread_with_state(
-                state, self._thread_id_by_trace.get(trace_id)
-            )
+            self._associate_thread_with_state(state, self._thread_id_by_trace.get(trace_id))
             return state
 
-        state = _ConversationState(
-            trace_id=trace_id, recording_mode=self._recording_mode
-        )
+        state = _ConversationState(trace_id=trace_id, recording_mode=self._recording_mode)
         self._associate_thread_with_state(state, self._thread_id_by_trace.get(trace_id))
         self._state_by_trace[trace_id] = state
         return state
 
-    def _associate_thread_with_state(
-        self, state: _ConversationState, thread_id: Optional[str]
-    ) -> None:
+    def _associate_thread_with_state(self, state: _ConversationState, thread_id: Optional[str]) -> None:
         if thread_id is None or state.thread_id == thread_id:
             return
         if state.thread_id is not None:
             logger.warning(
-                "langsmith voice: trace %x is already bound to thread %s; "
-                "ignoring a second thread id %s.",
+                "langsmith voice: trace %x is already bound to thread %s; ignoring a second thread id %s.",
                 state.trace_id,
                 state.thread_id,
                 thread_id,
@@ -254,8 +243,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             # Lifecycle instrumentation must never prevent a LiveKit session
             # from starting. The release timeout remains the failure fallback.
             logger.warning(
-                "langsmith voice: failed installing the automatic LiveKit "
-                "session-report callback.",
+                "langsmith voice: failed installing the automatic LiveKit session-report callback.",
                 exc_info=True,
             )
 
@@ -287,13 +275,10 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         def _capture_report(*_: Any) -> None:
             try:
                 report = job_ctx.make_session_report(session)
-                self._attach_session_report_to_trace(
-                    report, trace_id=trace_id, expected_state=state
-                )
+                self._attach_session_report_to_trace(report, trace_id=trace_id, expected_state=state)
             except Exception:
                 logger.warning(
-                    "langsmith voice: failed capturing the automatic LiveKit "
-                    "session report.",
+                    "langsmith voice: failed capturing the automatic LiveKit session report.",
                     exc_info=True,
                 )
 
@@ -333,9 +318,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         @session.on("user_input_transcribed")
         def _on_user_input_transcribed(ev: Any) -> None:
             if getattr(ev, "is_final", False):
-                self._record_user_transcript(
-                    str(thread_id), getattr(ev, "transcript", "") or ""
-                )
+                self._record_user_transcript(str(thread_id), getattr(ev, "transcript", "") or "")
 
     def attach_session_report(
         self,
@@ -364,9 +347,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
                 self._warn_missing_conversation(thread, "session report")
                 return
             trace_id = state.trace_id
-        self._attach_session_report_to_trace(
-            report, trace_id=trace_id, expected_state=state
-        )
+        self._attach_session_report_to_trace(report, trace_id=trace_id, expected_state=state)
 
     def _attach_session_report_to_trace(
         self,
@@ -384,11 +365,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
 
         history = getattr(report, "chat_history", None)
         messages = build_messages_from_chat_history(history) if history else []
-        report_audio = (
-            self._audio_from_session_report(report)
-            if read_report_audio
-            else (None, None, None)
-        )
+        report_audio = self._audio_from_session_report(report) if read_report_audio else (None, None, None)
 
         with self._state_lock:
             state = self._get_state(trace_id)
@@ -450,10 +427,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         pending_audio = None
         status: Optional[str] = "none"
         if data:
-            if (
-                self.audio_size_limit_bytes is not None
-                and len(data) > self.audio_size_limit_bytes
-            ):
+            if self.audio_size_limit_bytes is not None and len(data) > self.audio_size_limit_bytes:
                 status = "too_large"
             else:
                 pending_audio = _PendingAudio(
@@ -500,9 +474,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             delivery,
         )
 
-    def _audio_from_session_report(
-        self, report: Any
-    ) -> tuple[Optional[_PendingAudio], Optional[float], Optional[str]]:
+    def _audio_from_session_report(self, report: Any) -> tuple[Optional[_PendingAudio], Optional[float], Optional[str]]:
         audio_path = getattr(report, "audio_recording_path", None)
         started_at = getattr(report, "audio_recording_started_at", None)
         if audio_path is None:
@@ -571,15 +543,11 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
     def _handle_stt(self, tspan: TranslatedSpan) -> None:
         tspan.set_kind("llm")
         tspan.set_model(tspan.attributes.get("gen_ai.request.model"))
-        tspan.set_provider(
-            normalize_provider(tspan.attributes.get("gen_ai.provider.name"))
-        )
+        tspan.set_provider(normalize_provider(tspan.attributes.get("gen_ai.provider.name")))
 
         transcript = get_content_attribute(tspan, "user_transcript")
         if transcript:
-            tspan.set_messages(
-                prompt=[build_user_message(f'Audio for: "{transcript}"')]
-            )
+            tspan.set_messages(prompt=[build_user_message(f'Audio for: "{transcript}"')])
             tspan.set_messages(completion=[build_assistant_message(str(transcript))])
         tspan.exclude_from_message_view()
 
@@ -591,15 +559,9 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         """
         tspan.set_kind("llm")
 
-        prompt = build_messages_from_gen_ai(
-            tspan.attributes.get("gen_ai.input.messages")
-        )
-        completion = build_messages_from_gen_ai(
-            tspan.attributes.get("gen_ai.output.messages")
-        )
-        instructions = build_system_messages_from_gen_ai(
-            tspan.attributes.get("gen_ai.system_instructions")
-        )
+        prompt = build_messages_from_gen_ai(tspan.attributes.get("gen_ai.input.messages"))
+        completion = build_messages_from_gen_ai(tspan.attributes.get("gen_ai.output.messages"))
+        instructions = build_system_messages_from_gen_ai(tspan.attributes.get("gen_ai.system_instructions"))
         legacy_prompt: list[dict] = []
         legacy_completion: list[dict] = []
         for event in tspan.events:
@@ -622,20 +584,14 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         ):
             tspan.attributes.pop(attribute, None)
 
-        provider = extract_provider_from_lk_metrics(
-            tspan.attributes.get("lk.llm_metrics")
-        )
+        provider = extract_provider_from_lk_metrics(tspan.attributes.get("lk.llm_metrics"))
         tspan.set_provider(normalize_provider(provider))
 
         usage = extract_llm_usage(tspan.attributes.get("lk.llm_metrics"))
         if usage:
             tspan.set_usage(**usage)
 
-        tspan.events[:] = [
-            e
-            for e in tspan.events
-            if e.name != _LLM_CHOICE_EVENT and e.name not in _LLM_EVENT_ROLES
-        ]
+        tspan.events[:] = [e for e in tspan.events if e.name != _LLM_CHOICE_EVENT and e.name not in _LLM_EVENT_ROLES]
 
     def _handle_tts(self, tspan: TranslatedSpan) -> None:
         tspan.set_kind("llm")
@@ -657,9 +613,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             tspan.attributes.get("gen_ai.request.model")
             or extract_model_from_lk_metrics(tspan.attributes.get("lk.tts_metrics"))
         )
-        provider = extract_provider_from_lk_metrics(
-            tspan.attributes.get("lk.tts_metrics")
-        )
+        provider = extract_provider_from_lk_metrics(tspan.attributes.get("lk.tts_metrics"))
         tspan.set_provider(normalize_provider(provider))
 
     def _handle_turn(self, tspan: TranslatedSpan) -> None:
@@ -668,9 +622,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         ``llm`` for a realtime model (the turn is the model call, usage stamped
         here); ``chain`` for cascade (the STT/LLM/TTS children carry their usage).
         """
-        tspan.set_kind(
-            "llm" if "lk.realtime_model_metrics" in tspan.attributes else "chain"
-        )
+        tspan.set_kind("llm" if "lk.realtime_model_metrics" in tspan.attributes else "chain")
 
         user_input = get_content_attribute(tspan, "user_input")
         response = get_content_attribute(tspan, "response.text")
@@ -705,9 +657,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             if state.thread_id is None:
                 return True
             has_transcript = bool(state.transcripts_waiting_for_span)
-            transcript = (
-                state.transcripts_waiting_for_span.pop(0) if has_transcript else ""
-            )
+            transcript = state.transcripts_waiting_for_span.pop(0) if has_transcript else ""
             if not has_transcript:
                 state.spans_waiting_for_transcript.append(tspan)
             self._refresh_state(state)
@@ -731,11 +681,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
                 waiting.append(transcript)
                 self._transcripts_waiting_for_trace[tid] = waiting
                 return
-            tspan = (
-                state.spans_waiting_for_transcript.pop(0)
-                if state.spans_waiting_for_transcript
-                else None
-            )
+            tspan = state.spans_waiting_for_transcript.pop(0) if state.spans_waiting_for_transcript else None
             if tspan is None:
                 state.transcripts_waiting_for_span.append(transcript)
             self._refresh_state(state)
@@ -755,9 +701,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             tspan.attributes["lk.user_transcript"] = transcript
             msg = build_user_message(transcript)
             tspan.set_messages(prompt=[msg])
-            self._append_transcript(
-                tspan.span.context.trace_id, msg, tspan.span.start_time
-            )
+            self._append_transcript(tspan.span.context.trace_id, msg, tspan.span.start_time)
 
     def _handle_tool(self, tspan: TranslatedSpan) -> None:
         tspan.set_kind("tool")
@@ -776,16 +720,12 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         tspan.set_root_span(True)
         tspan.set_metadata("ls_modality", "audio")
         tspan.set_metadata("ls_integration", "livekit")
-        tspan.set_metadata(
-            "ls_integration_version", (get_package_version("livekit-agents") or "")
-        )
+        tspan.set_metadata("ls_integration_version", (get_package_version("livekit-agents") or ""))
         with self._state_lock:
             state = self._get_or_create_state(trace_id)
             state.root = tspan
             self._refresh_state(state)
-            missing_egress_thread = (
-                state.recording_mode == "egress" and state.thread_id is None
-            )
+            missing_egress_thread = state.recording_mode == "egress" and state.thread_id is None
         if missing_egress_thread:
             logger.warning(
                 "langsmith voice: egress trace %x has no thread id; its recording "
@@ -795,9 +735,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             )
         self._export_conversation_if_ready(trace_id)
 
-    def _export_conversation_if_ready(
-        self, trace_id: int, *, force: bool = False
-    ) -> None:
+    def _export_conversation_if_ready(self, trace_id: int, *, force: bool = False) -> None:
         """Export the deferred root once the required session data is ready.
 
         Every mode waits for the report. Egress additionally waits for
@@ -845,13 +783,9 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         return state.report_hook_session_id is not None or state.thread_id is not None
 
     def _has_required_session_data(self, state: _ConversationState) -> bool:
-        return state.report_received and (
-            state.recording_mode != "egress" or state.recording_received
-        )
+        return state.report_received and (state.recording_mode != "egress" or state.recording_received)
 
-    def _export_completed_conversation(
-        self, state: _ConversationState, root: TranslatedSpan
-    ) -> None:
+    def _export_completed_conversation(self, state: _ConversationState, root: TranslatedSpan) -> None:
         for speaking_span in state.spans_waiting_for_transcript:
             self._export(speaking_span)
         self._render_conversation(root, state)
@@ -902,9 +836,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         if timer is not None:
             timer.cancel()
 
-    def _stamp_recording_origin(
-        self, tspan: TranslatedSpan, started_at: Optional[float]
-    ) -> None:
+    def _stamp_recording_origin(self, tspan: TranslatedSpan, started_at: Optional[float]) -> None:
         """Stamp where the recording sits on the trace's timeline, and why.
 
         LiveKit's recorder starts inside ``session.start()`` — after room
@@ -927,9 +859,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             round((started_at - root_start_s) * 1000),
         )
 
-    def _render_conversation(
-        self, tspan: TranslatedSpan, state: _ConversationState
-    ) -> None:
+    def _render_conversation(self, tspan: TranslatedSpan, state: _ConversationState) -> None:
         """Set the conversation transcript as the root's input.
 
         Prefers a session report's chat history — it is ordered by the messages'
@@ -941,9 +871,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             return
         if not state.transcript:
             return
-        tspan.set_messages(
-            prompt=[msg for _, msg in sorted(state.transcript, key=lambda e: e[0])]
-        )
+        tspan.set_messages(prompt=[msg for _, msg in sorted(state.transcript, key=lambda e: e[0])])
 
     def shutdown(self) -> None:
         """Force-export any still-held roots and user_speaking spans, then shut down.
@@ -989,13 +917,9 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
         except Exception:
             logger.warning("langsmith voice: no readable recording at %s.", path)
             return None, "unreadable"
-        if (
-            self.audio_size_limit_bytes is not None
-            and size > self.audio_size_limit_bytes
-        ):
+        if self.audio_size_limit_bytes is not None and size > self.audio_size_limit_bytes:
             logger.warning(
-                "langsmith voice: recording at %s is %d bytes, over the "
-                "%d-byte limit; skipping the attachment.",
+                "langsmith voice: recording at %s is %d bytes, over the %d-byte limit; skipping the attachment.",
                 path,
                 size,
                 self.audio_size_limit_bytes,
@@ -1011,19 +935,14 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             )
             return None, "unreadable"
 
-    def _attach_pending_audio(
-        self, tspan: TranslatedSpan, state: _ConversationState
-    ) -> bool:
+    def _attach_pending_audio(self, tspan: TranslatedSpan, state: _ConversationState) -> bool:
         pending = state.pending_audio
         attached = False
         status = state.audio_status
         if pending is not None:
             if not pending.data:
                 status = "none"
-            elif (
-                self.audio_size_limit_bytes is not None
-                and len(pending.data) > self.audio_size_limit_bytes
-            ):
+            elif self.audio_size_limit_bytes is not None and len(pending.data) > self.audio_size_limit_bytes:
                 status = "too_large"
             else:
                 attached = self._attach_audio(
@@ -1050,9 +969,7 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
             flat_key = f"langsmith.metadata.{key.replace('.', '_')}"
             parsed = try_parse_json_object(value)
             if parsed is not None:
-                for name, val in flatten_lk_attributes_to_ls_metadata(
-                    parsed, flat_key
-                ).items():
+                for name, val in flatten_lk_attributes_to_ls_metadata(parsed, flat_key).items():
                     if name not in tspan.attributes:
                         tspan.attributes[name] = val
                 continue
@@ -1060,17 +977,12 @@ class LiveKitLangSmithSpanProcessor(BaseLangSmithSpanProcessor):
                 continue
             tspan.attributes[flat_key] = value
 
-        provider = normalize_provider(
-            tspan.attributes.get("gen_ai.provider.name")
-        ) or normalize_provider(tspan.attributes.get("gen_ai.system"))
+        provider = normalize_provider(tspan.attributes.get("gen_ai.provider.name")) or normalize_provider(
+            tspan.attributes.get("gen_ai.system")
+        )
         tspan.set_provider(provider)
 
-        if (
-            "lk.realtime_model_metrics" in tspan.attributes
-            and "langsmith.usage_metadata" not in tspan.attributes
-        ):
-            usage = extract_realtime_usage(
-                tspan.attributes["lk.realtime_model_metrics"]
-            )
+        if "lk.realtime_model_metrics" in tspan.attributes and "langsmith.usage_metadata" not in tspan.attributes:
+            usage = extract_realtime_usage(tspan.attributes["lk.realtime_model_metrics"])
             if usage:
                 tspan.set_usage(**usage)

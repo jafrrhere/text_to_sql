@@ -21,7 +21,13 @@ which is not necessarily the task performing the await; SQLAlchemy runs
 some operations, such as the ``close()`` performed by an async context
 manager on exit, in a task of its own.
 
-Two things are asserted afterwards:
+Four things are asserted afterwards:
+
+* The cancellation reaches the application.  The task ends cancelled,
+  rather than raising some other exception in place of the
+  ``CancelledError`` or returning normally; an application that treats an
+  ordinary exception as something to retry would otherwise carry on past
+  its own shutdown.
 
 * Every DBAPI connection the pool creates is eventually closed through
   ``Pool._close_connection()``.  A connection that is never closed is
@@ -36,6 +42,12 @@ Two things are asserted afterwards:
   latter case, an application that disposes of its engine at that point
   has the connection returned into the disposed pool afterwards, where
   nothing closes it.
+
+* The pool still works.  The scenario is run once more against the same
+  engine, un-cancelled, and has to succeed.  A connection that was closed
+  and nonetheless returned to the pool as though it were usable is neither
+  leaked nor a lost slot; it is found only by the next thing to check it
+  out.
 
 """
 
@@ -158,7 +170,8 @@ def await_points(cancel_at=()):
 
 class ConnectionAccounting:
     """Records which DBAPI connections a pool created and which it managed
-    to close, and how many of the pool's slots were lost.
+    to close, how many of the pool's slots were lost, and whether the pool
+    could still be used afterwards.
 
     Creation is observed at ``Pool._invoke_creator`` rather than through the
     ``connect`` pool event, because the ``connect`` event is itself where
@@ -172,6 +185,8 @@ class ConnectionAccounting:
         self._real_invoke_creator = pool._invoke_creator
         self._real_close_connection = pool._close_connection
         self._lost_slots = 0
+        self._next_use_error = None
+        self._uncancelled_outcome = None
         self._created = set()
         self._closed = set()
 
@@ -211,6 +226,23 @@ class ConnectionAccounting:
 
         return self._created - self._closed
 
+    def record_cancellation(self, task, cancelled_at):
+        """Record whether a cancellation delivered to ``task`` ended it.
+
+        To be called once ``task`` is done.  ``cancelled_at`` is
+        :attr:`.AwaitPoints.cancelled_at`; if it is empty, nothing was
+        cancelled and there is nothing to record.
+
+        """
+        if not cancelled_at or task.cancelled():
+            return
+
+        err = task.exception()
+        if err is not None:
+            self._uncancelled_outcome = f"raised {type(err).__name__}"
+        else:
+            self._uncancelled_outcome = "returned normally"
+
     def record_lost_slots(self):
         """Record the pool slots still checked out.
 
@@ -223,11 +255,36 @@ class ConnectionAccounting:
         gc.collect()
         self._lost_slots = self._pool.checkedout()
 
+    async def record_next_use(self, scenario, engine):
+        """Run ``scenario`` once more, un-cancelled, and record what it
+        raises, if anything.
+
+        To be called once the application's task is done, and before the
+        engine is disposed.  The application goes on using its engine after
+        a cancellation, and whatever the pool hands out next has to work.
+
+        """
+        if self._lost_slots > 0:
+            # already reported, and for a pool with no slots remaining
+            # the scenario could only wait out the pool timeout
+            return
+
+        try:
+            await scenario(engine)
+        except Exception as err:
+            self._next_use_error = err
+
     def get_failure_messages(self):
-        """Return a list of strings describing each leaked connection and
-        lost pool slot, empty if there were none."""
+        """Return a list of strings describing each leaked connection,
+        lost pool slot and failed further use of the pool, empty if there
+        were none."""
 
         failures = []
+        if self._uncancelled_outcome is not None:
+            failures.append(
+                "the cancelled task was not cancelled; it "
+                f"{self._uncancelled_outcome}"
+            )
         if self.leaked:
             failures.append(
                 f"{len(self.leaked)} of {len(self._created)} connection(s) "
@@ -237,6 +294,11 @@ class ConnectionAccounting:
             failures.append(
                 f"{self._lost_slots} pool slot(s) were left checked out "
                 "with nothing able to return them"
+            )
+        if self._next_use_error is not None:
+            failures.append(
+                "the next use of the pool raised "
+                f"{type(self._next_use_error).__name__}"
             )
         return failures
 
@@ -265,7 +327,8 @@ async def run_scenario(
     before opening its replacement.
 
     Returns the :class:`.AwaitPoints` for the run, and a description of
-    what the cancellation cost the pool, or ``None`` if it cost nothing.
+    what the cancellation cost the pool or the application, or ``None`` if
+    it cost nothing.
 
     """
     assert warm or not recycle, "recycle requires 'warm'"
@@ -278,8 +341,9 @@ async def run_scenario(
                 engine.pool._invalidate(None)
 
         with await_points(cancel_at) as points:
+            task = points.create_task(scenario(engine))
             try:
-                await points.create_task(scenario(engine))
+                await task
             except BaseException:
                 # the cancellation itself, or whatever the dialect raised
                 # in response to it.  What the scenario raised is not the
@@ -293,8 +357,15 @@ async def run_scenario(
                 if not points.cancelled_at:
                     raise
 
+        # whatever the scenario raised, a cancellation delivered to it has
+        # to end it as cancelled
+        accounting.record_cancellation(task, points.cancelled_at)
+
         # the scenario is over as far as the application can tell
         accounting.record_lost_slots()
+
+        # and it carries on using the engine
+        await accounting.record_next_use(scenario, engine)
 
         # the application may now dispose of the engine
         try:

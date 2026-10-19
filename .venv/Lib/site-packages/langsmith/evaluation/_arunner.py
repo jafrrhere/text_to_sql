@@ -71,19 +71,13 @@ else:
 
 logger = logging.getLogger(__name__)
 
-ATARGET_T = Union[
-    Callable[[dict], Awaitable[dict]], Callable[[dict, dict], Awaitable[dict]]
-]
+ATARGET_T = Union[Callable[[dict], Awaitable[dict]], Callable[[dict, dict], Awaitable[dict]]]
 
 
 async def aevaluate(
-    target: Union[
-        ATARGET_T, AsyncIterable[dict], Runnable, str, uuid.UUID, schemas.TracerSession
-    ],
+    target: Union[ATARGET_T, AsyncIterable[dict], Runnable, str, uuid.UUID, schemas.TracerSession],
     /,
-    data: Union[
-        DATA_T, AsyncIterable[schemas.Example], Iterable[schemas.Example], None
-    ] = None,
+    data: Union[DATA_T, AsyncIterable[schemas.Example], Iterable[schemas.Example], None] = None,
     evaluators: Optional[Sequence[Union[EVALUATOR_T, AEVALUATOR_T]]] = None,
     summary_evaluators: Optional[Sequence[SUMMARY_EVALUATOR_T]] = None,
     metadata: Optional[dict] = None,
@@ -425,9 +419,7 @@ async def aevaluate_existing(
         ...     await asyncio.sleep(0.001)
         ...     return {"output": "4"}
         >>> results = asyncio.run(
-        ...     aevaluate(
-        ...         apredict, data=dataset_name, experiment_prefix="doctest_experiment"
-        ...     )
+        ...     aevaluate(apredict, data=dataset_name, experiment_prefix="doctest_experiment")
         ... )  # doctest: +ELLIPSIS
         View the evaluation results for experiment:...
         >>> experiment_id = results.experiment_name
@@ -455,11 +447,7 @@ async def aevaluate_existing(
     project = (
         experiment
         if isinstance(experiment, schemas.TracerSession)
-        else (
-            await aitertools.aio_to_thread(
-                contextvars.copy_context(), _load_experiment, experiment, client
-            )
-        )
+        else (await aitertools.aio_to_thread(contextvars.copy_context(), _load_experiment, experiment, client))
     )
     runs = await aitertools.aio_to_thread(
         contextvars.copy_context(),
@@ -468,9 +456,7 @@ async def aevaluate_existing(
         client,
         load_nested=load_nested,
     )
-    data_map = await aitertools.aio_to_thread(
-        contextvars.copy_context(), _load_examples_map, client, project
-    )
+    data_map = await aitertools.aio_to_thread(contextvars.copy_context(), _load_examples_map, client, project)
     data = [data_map[run.reference_example_id] for run in runs]
     return await _aevaluate(
         runs,
@@ -518,9 +504,7 @@ async def _aevaluate(
         runs,
         client,
     )
-    num_include_attachments = int(
-        _target_include_attachments(target)
-    ) + _evaluators_include_attachments(evaluators)
+    num_include_attachments = int(_target_include_attachments(target)) + _evaluators_include_attachments(evaluators)
     manager = await _AsyncExperimentManager(
         data,
         client=client,
@@ -550,16 +534,12 @@ async def _aevaluate(
                     cast(ATARGET_T, target), evaluators, max_concurrency=max_concurrency
                 )
             else:
-                manager = await manager.awith_predictions(
-                    cast(ATARGET_T, target), max_concurrency=max_concurrency
-                )
+                manager = await manager.awith_predictions(cast(ATARGET_T, target), max_concurrency=max_concurrency)
             if summary_evaluators:
                 manager = await manager.awith_summary_evaluators(summary_evaluators)
         else:
             if evaluators:
-                manager = await manager.awith_evaluators(
-                    evaluators, max_concurrency=max_concurrency
-                )
+                manager = await manager.awith_evaluators(evaluators, max_concurrency=max_concurrency)
             if summary_evaluators:
                 manager = await manager.awith_summary_evaluators(summary_evaluators)
         results = AsyncExperimentResults(manager)
@@ -641,16 +621,12 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
         self._data = data
         self._evaluator_keys = evaluator_keys
         self._examples: Optional[AsyncIterable[schemas.Example]] = None
-        self._runs = (
-            aitertools.ensure_async_iterator(runs) if runs is not None else None
-        )
+        self._runs = aitertools.ensure_async_iterator(runs) if runs is not None else None
         self._evaluation_results = evaluation_results
         self._summary_results = summary_results
         self._num_repetitions = num_repetitions
         self._num_examples = (
-            num_examples
-            if num_examples is not None
-            else _resolve_num_examples(data, client=self.client)
+            num_examples if num_examples is not None else _resolve_num_examples(data, client=self.client)
         )
         self._include_attachments = include_attachments
         self._reuse_attachments = reuse_attachments
@@ -674,15 +650,10 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
 
         new_attachments: dict[str, schemas.AttachmentInfo] = {}
         for name, attachment in example.attachments.items():
-            if (
-                self._attachment_raw_data_dict is not None
-                and str(example.id) + name in self._attachment_raw_data_dict
-            ):
+            if self._attachment_raw_data_dict is not None and str(example.id) + name in self._attachment_raw_data_dict:
                 new_attachments[name] = {
                     "presigned_url": attachment["presigned_url"],
-                    "reader": io.BytesIO(
-                        self._attachment_raw_data_dict[str(example.id) + name]
-                    ),
+                    "reader": io.BytesIO(self._attachment_raw_data_dict[str(example.id) + name]),
                     "mime_type": attachment["mime_type"],
                 }
             else:
@@ -721,12 +692,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
                 examples_list = [example async for example in self._examples]
                 self._examples = async_chain_from_iterable(
                     [
-                        async_iter_from_list(
-                            [
-                                self._reset_example_attachments(example)
-                                for example in examples_list
-                            ]
-                        )
+                        async_iter_from_list([self._reset_example_attachments(example) for example in examples_list])
                         for _ in range(self._num_repetitions)
                     ]
                 )
@@ -737,9 +703,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
         return examples_iter
 
     async def get_dataset_id(self) -> str:
-        if self._experiment is None or not getattr(
-            self._experiment, "reference_dataset_id", None
-        ):
+        if self._experiment is None or not getattr(self._experiment, "reference_dataset_id", None):
             example = await aitertools.py_anext(await self.aget_examples())
             if example is None:
                 raise ValueError("No examples found in the dataset.")
@@ -749,9 +713,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
     async def aget_runs(self) -> AsyncIterator[schemas.Run]:
         if self._runs is None:
             raise ValueError("Runs not loaded yet.")
-        self._runs, runs = aitertools.atee(
-            aitertools.ensure_async_iterator(self._runs), 2, lock=asyncio.Lock()
-        )
+        self._runs, runs = aitertools.atee(aitertools.ensure_async_iterator(self._runs), 2, lock=asyncio.Lock())
         async for run in runs:
             yield run
 
@@ -773,13 +735,11 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
             first_example = await aitertools.py_anext(await self.aget_examples())
         except StopAsyncIteration:
             raise ValueError(
-                "No examples found in the dataset. "
-                "Please ensure the data provided to aevaluate is not empty."
+                "No examples found in the dataset. Please ensure the data provided to aevaluate is not empty."
             )
         if not first_example:
             raise ValueError(
-                "No examples found in the dataset."
-                "Please ensure the data provided to aevaluate is not empty."
+                "No examples found in the dataset.Please ensure the data provided to aevaluate is not empty."
             )
         project = self._get_project(first_example) if self._upload_results else None
         self._print_experiment_start(project, first_example)
@@ -792,13 +752,8 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
     def _get_example_with_readers(self, example: schemas.Example) -> schemas.Example:
         new_attachments: dict[str, schemas.AttachmentInfo] = {}
         for name, attachment in (example.attachments or {}).items():
-            if (
-                self._attachment_raw_data_dict is not None
-                and str(example.id) + name in self._attachment_raw_data_dict
-            ):
-                reader = io.BytesIO(
-                    self._attachment_raw_data_dict[str(example.id) + name]
-                )
+            if self._attachment_raw_data_dict is not None and str(example.id) + name in self._attachment_raw_data_dict:
+                reader = io.BytesIO(self._attachment_raw_data_dict[str(example.id) + name])
                 new_attachments[name] = {
                     "presigned_url": attachment["presigned_url"],
                     "reader": reader,
@@ -997,9 +952,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
             async def score_all():
                 async for current_results in self.aget_results():
                     # Yield the coroutine to be awaited later in aiter_with_concurrency
-                    yield self._arun_evaluators(
-                        evaluators, current_results, feedback_executor=feedback_executor
-                    )
+                    yield self._arun_evaluators(evaluators, current_results, feedback_executor=feedback_executor)
 
             async for result in aitertools.aiter_with_concurrency(
                 max_concurrency, score_all(), _eager_consumption_timeout=0.001
@@ -1021,9 +974,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
             **{
                 **_addressed_to_project(current_context, "evaluators"),
                 "metadata": metadata,
-                "enabled": _evaluator_tracing_mode(
-                    self._upload_results, self._disable_evaluator_tracing
-                ),
+                "enabled": _evaluator_tracing_mode(self._upload_results, self._disable_evaluator_tracing),
                 "client": self.client,
             }
         ):
@@ -1039,9 +990,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
                         example=self._get_example_with_readers(example),
                         evaluator_run_id=evaluator_run_id,
                     )
-                    selected_results = self.client._select_eval_results(
-                        evaluator_response
-                    )
+                    selected_results = self.client._select_eval_results(evaluator_response)
                     if self._disable_evaluator_tracing:
                         evaluator_response = _without_source_run_ids(selected_results)
 
@@ -1061,20 +1010,14 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
                             results=[
                                 EvaluationResult(
                                     key=key,
-                                    source_run_id=(
-                                        None
-                                        if self._disable_evaluator_tracing
-                                        else evaluator_run_id
-                                    ),
+                                    source_run_id=(None if self._disable_evaluator_tracing else evaluator_run_id),
                                     comment=repr(e),
                                     extra={"error": True},
                                 )
                                 for key in feedback_keys
                             ]
                         )
-                        selected_results = self.client._select_eval_results(
-                            error_response
-                        )
+                        selected_results = self.client._select_eval_results(error_response)
                         if self._upload_results:
                             self.client._log_evaluation_feedback(
                                 error_response,
@@ -1087,8 +1030,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
                         logger.debug(f"Error parsing feedback keys: {e2}")
                         pass
                     logger.error(
-                        f"Error running evaluator {repr(evaluator)} on"
-                        f" run {run.id}: {repr(e)}",
+                        f"Error running evaluator {repr(evaluator)} on run {run.id}: {repr(e)}",
                         exc_info=True,
                     )
 
@@ -1110,9 +1052,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
     ) -> AsyncIterator[EvaluationResults]:
         runs, examples = [], []
         async_examples = aitertools.ensure_async_iterator(await self.aget_examples())
-        async for run, example in aitertools.async_zip(
-            self.aget_runs(), async_examples
-        ):
+        async for run, example in aitertools.async_zip(self.aget_runs(), async_examples):
             runs.append(run)
             examples.append(example)
         aggregate_feedback = []
@@ -1129,9 +1069,7 @@ class _AsyncExperimentManager(_ExperimentManagerMixin):
             **{
                 **_addressed_to_project(current_context, "evaluators"),
                 "metadata": metadata,
-                "enabled": _evaluator_tracing_mode(
-                    self._upload_results, self._disable_evaluator_tracing
-                ),
+                "enabled": _evaluator_tracing_mode(self._upload_results, self._disable_evaluator_tracing),
                 "client": self.client,
             }
         ):
@@ -1267,10 +1205,7 @@ class AsyncExperimentResults:
             dataset_id = await self._manager.get_dataset_id()
             project_url = experiment.url.split("?")[0]
             base_url = project_url.split("/projects/p/")[0]
-            self._comparison_url = (
-                f"{base_url}/datasets/{dataset_id}/compare?"
-                f"selectedSessions={experiment.id}"
-            )
+            self._comparison_url = f"{base_url}/datasets/{dataset_id}/compare?selectedSessions={experiment.id}"
         return self._comparison_url
 
     def __aiter__(self) -> AsyncIterator[ExperimentResultRow]:
@@ -1301,9 +1236,7 @@ class AsyncExperimentResults:
             self._summary_results = summary_scores
             self._condition.notify_all()
 
-    def to_pandas(
-        self, start: Optional[int] = 0, end: Optional[int] = None
-    ) -> DataFrame:
+    def to_pandas(self, start: Optional[int] = 0, end: Optional[int] = None) -> DataFrame:
         return _to_pandas(self._results, start=start, end=end)
 
     def _repr_html_(self) -> str:
@@ -1365,9 +1298,7 @@ async def _aforward(
             args = [getattr(example, argn) for argn in arg_names]
             await fn(*args, langsmith_extra=langsmith_extra)
         except Exception as e:
-            logger.error(
-                f"Error running target function: {e}", exc_info=True, stacklevel=1
-            )
+            logger.error(f"Error running target function: {e}", exc_info=True, stacklevel=1)
         return _ForwardResults(
             run=cast(schemas.Run, run),
             example=example,
@@ -1420,9 +1351,7 @@ def _aresolve_data(
     """Return the examples for the given dataset."""
     if isinstance(data, AsyncIterable):
         return aitertools.ensure_async_iterator(data)
-    return aitertools.ensure_async_iterator(
-        _resolve_data(data, client=client, include_attachments=include_attachments)
-    )
+    return aitertools.ensure_async_iterator(_resolve_data(data, client=client, include_attachments=include_attachments))
 
 
 T = TypeVar("T")

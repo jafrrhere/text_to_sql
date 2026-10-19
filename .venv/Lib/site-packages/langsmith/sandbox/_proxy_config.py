@@ -129,8 +129,7 @@ def proxy_config(
     """
     if no_proxy is not None:
         warnings.warn(
-            "no_proxy is deprecated and ignored; the sandbox runtime has no "
-            "proxy bypass list",
+            "no_proxy is deprecated and ignored; the sandbox runtime has no proxy bypass list",
             DeprecationWarning,
             stacklevel=2,
         )

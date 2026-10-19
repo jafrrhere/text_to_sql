@@ -242,9 +242,7 @@ def begin_llm_run_from_assistant_messages(
         run_type="llm",
         inputs={"messages": inputs} if inputs else {},
         extra={"metadata": llm_metadata},
-        start_time=datetime.fromtimestamp(start_time, tz=timezone.utc)
-        if start_time
-        else None,
+        start_time=datetime.fromtimestamp(start_time, tz=timezone.utc) if start_time else None,
     )
 
     try:
@@ -306,12 +304,8 @@ def _inject_tracing_hooks(options: Any, session: Optional[SessionState] = None) 
     try:
         from claude_agent_sdk import HookMatcher  # type: ignore[import-not-found]
 
-        langsmith_pre_matcher = HookMatcher(
-            matcher=None, hooks=[_bind_hook_to_session(pre_tool_use_hook, session)]
-        )
-        langsmith_post_matcher = HookMatcher(
-            matcher=None, hooks=[_bind_hook_to_session(post_tool_use_hook, session)]
-        )
+        langsmith_pre_matcher = HookMatcher(matcher=None, hooks=[_bind_hook_to_session(pre_tool_use_hook, session)])
+        langsmith_post_matcher = HookMatcher(matcher=None, hooks=[_bind_hook_to_session(post_tool_use_hook, session)])
         langsmith_failure_matcher = HookMatcher(
             matcher=None,
             hooks=[_bind_hook_to_session(post_tool_use_failure_hook, session)],
@@ -358,9 +352,7 @@ def _wrap_tool_handler(
         tool_run = _get_last_active_tool_run(session, args=args, tool_name=tool_name)
         if tool_run:
             token = _context._PARENT_RUN_TREE_REF.set(weakref.ref(tool_run))
-            session_token = (
-                _current_session.set(session) if session is not None else None
-            )
+            session_token = _current_session.set(session) if session is not None else None
             try:
                 return await original_handler(args)
             finally:
@@ -389,9 +381,7 @@ def _tool_run_matches(run: Any, args: Any, tool_name: Optional[str]) -> bool:
     run_name = str(getattr(run, "name", ""))
     # SDK MCP tools show up in hook data as e.g. ``mcp__weather__get_weather``
     # while the handler only knows its short name ``get_weather``.
-    name_matches = (
-        tool_name == run_name or tool_name in run_name or run_name in tool_name
-    )
+    name_matches = tool_name == run_name or tool_name in run_name or run_name in tool_name
     if not name_matches:
         return False
     inputs = getattr(run, "inputs", None)
@@ -403,9 +393,7 @@ def _tool_run_matches(run: Any, args: Any, tool_name: Optional[str]) -> bool:
     return recorded == (args or {})
 
 
-def _newest_matching_tool_run(
-    sessions: list[SessionState], args: Any, tool_name: Optional[str]
-) -> Any:
+def _newest_matching_tool_run(sessions: list[SessionState], args: Any, tool_name: Optional[str]) -> Any:
     """Return the most recently created active tool run that matches."""
     candidates: list[tuple[float, Any]] = []
     for candidate_session in sessions:
@@ -529,9 +517,7 @@ def instrument_claude_client(original_class: Any) -> None:
         return await _orig_query(self, *args, **kwargs)
 
     # Trace one response, ending before its ResultMessage reaches the caller.
-    async def _traced_response(
-        self: Any, messages: AsyncIterable[Any]
-    ) -> AsyncGenerator[Any, None]:
+    async def _traced_response(self: Any, messages: AsyncIterable[Any]) -> AsyncGenerator[Any, None]:
         trace_inputs: dict[str, Any] = {}
         trace_metadata: dict[str, Any] = {
             "ls_integration": "claude-agent-sdk",
@@ -550,9 +536,7 @@ def instrument_claude_client(original_class: Any) -> None:
                     trace_inputs["system"] = system_prompt
                 elif isinstance(system_prompt, dict):
                     if system_prompt.get("type") == "preset":
-                        preset_text = (
-                            f"preset: {system_prompt.get('preset', 'claude_code')}"
-                        )
+                        preset_text = f"preset: {system_prompt.get('preset', 'claude_code')}"
                         if "append" in system_prompt:
                             preset_text += f"\nappend: {system_prompt['append']}"
                         trace_inputs["system"] = preset_text
@@ -616,9 +600,7 @@ def instrument_claude_client(original_class: Any) -> None:
             cleanup.callback(_restore_caller_context)
             # Include the wait for the first message in the response duration.
             if self._ls_start_time is not None:
-                run.start_time = datetime.fromtimestamp(
-                    self._ls_start_time, tz=timezone.utc
-                )
+                run.start_time = datetime.fromtimestamp(self._ls_start_time, tz=timezone.utc)
             # Bind this client's state container to the ContextVar so stream
             # helpers on this SDK event loop pick it up (see
             # _hooks.SessionState). This keeps concurrent ClaudeSDKClient
@@ -642,9 +624,7 @@ def instrument_claude_client(original_class: Any) -> None:
             try:
                 async for msg in messages:
                     if awaiting_streamed_input and self._ls_streamed_input:
-                        unwrapped_messages = unwrap_message_dicts(
-                            self._ls_streamed_input
-                        )
+                        unwrapped_messages = unwrap_message_dicts(self._ls_streamed_input)
                         if unwrapped_messages:
                             run.inputs["messages"] = unwrapped_messages
                             prompt_for_llm = self._ls_streamed_input
@@ -654,11 +634,7 @@ def instrument_claude_client(original_class: Any) -> None:
 
                     if msg_type == "AssistantMessage":
                         parent_tool_use_id = getattr(msg, "parent_tool_use_id", None)
-                        llm_parent = (
-                            get_subagent_run_by_tool_id(parent_tool_use_id)
-                            if parent_tool_use_id
-                            else None
-                        )
+                        llm_parent = get_subagent_run_by_tool_id(parent_tool_use_id) if parent_tool_use_id else None
 
                         ctx_key = parent_tool_use_id
                         ctx_history = collected_by_ctx.setdefault(ctx_key, [])
@@ -694,28 +670,18 @@ def instrument_claude_client(original_class: Any) -> None:
                                             "tool_call_id": tool_use_id,
                                         }
                                     )
-                                    if (
-                                        tool_use_id
-                                        and tool_use_id in session.active_tool_runs
-                                    ):
-                                        tool_run, _ = session.active_tool_runs.pop(
-                                            tool_use_id
-                                        )
+                                    if tool_use_id and tool_use_id in session.active_tool_runs:
+                                        tool_run, _ = session.active_tool_runs.pop(tool_use_id)
                                         result_content = block.get("content", "")
                                         is_error = block.get("is_error", False)
                                         tool_run.end(
                                             outputs={"output": result_content},
-                                            error=str(result_content)
-                                            if is_error
-                                            else None,
+                                            error=str(result_content) if is_error else None,
                                         )
                                         try:
                                             tool_run.patch()
                                         except Exception as e:
-                                            logger.warning(
-                                                "Failed to patch"
-                                                f" orphaned tool run: {e}"
-                                            )
+                                            logger.warning(f"Failed to patch orphaned tool run: {e}")
                             else:
                                 ctx_history.append(
                                     {
@@ -734,9 +700,7 @@ def instrument_claude_client(original_class: Any) -> None:
                                 "session_id": session_id_val,
                                 "thread_id": session_id_val,
                                 "duration_ms": getattr(msg, "duration_ms", None),
-                                "duration_api_ms": getattr(
-                                    msg, "duration_api_ms", None
-                                ),
+                                "duration_api_ms": getattr(msg, "duration_api_ms", None),
                                 "is_error": getattr(msg, "is_error", None),
                             }.items()
                             if v is not None
@@ -754,9 +718,7 @@ def instrument_claude_client(original_class: Any) -> None:
                 _end_run()
             except GeneratorExit:
                 # Consumer closed the stream before a ResultMessage arrived.
-                logger.debug(
-                    "Claude Agent stream closed by consumer; ending run %s", run.id
-                )
+                logger.debug("Claude Agent stream closed by consumer; ending run %s", run.id)
                 _end_run()
             except Exception:
                 # Let the SDK error reach the caller. The trace() context
@@ -777,9 +739,7 @@ def instrument_claude_client(original_class: Any) -> None:
             # The caller may stop reading here; the trace is already finished.
             yield result_message
 
-    async def _prepend_message(
-        first: Any, messages: AsyncIterator[Any]
-    ) -> AsyncGenerator[Any, None]:
+    async def _prepend_message(first: Any, messages: AsyncIterator[Any]) -> AsyncGenerator[Any, None]:
         """Put back the first message into the async iterator so it can be processed."""
         yield first
         async for msg in messages:
@@ -833,9 +793,7 @@ def instrument_sdk_mcp_tool(tool_class: Any) -> None:
         _orig_init(self, *args, **kwargs)
         handler = self.handler
         if callable(handler) and not getattr(handler, "_langsmith_wrapped", False):
-            self.handler = _wrap_tool_handler(
-                handler, tool_name=getattr(self, "name", None)
-            )
+            self.handler = _wrap_tool_handler(handler, tool_name=getattr(self, "name", None))
 
     tool_class.__init__ = _patched_init
     tool_class._langsmith_handler_patched = True

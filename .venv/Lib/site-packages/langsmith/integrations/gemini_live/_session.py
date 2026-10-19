@@ -184,9 +184,7 @@ class _GeminiLiveTracer:
                 name="turn_complete",
                 inbound=False,
                 run_type="llm",
-                outputs=(
-                    {"role": "assistant", "content": agent_text} if agent_text else {}
-                ),
+                outputs=({"role": "assistant", "content": agent_text} if agent_text else {}),
                 usage_metadata=self._turn_usage,
                 metadata={
                     "ls_provider": "google",
@@ -293,9 +291,7 @@ class _GeminiLiveTracer:
             self._session.close_span(run)
 
     def _prune_empty_tools(self) -> None:
-        self._open_tools = {
-            key: queue for key, queue in self._open_tools.items() if queue
-        }
+        self._open_tools = {key: queue for key, queue in self._open_tools.items() if queue}
 
     def _flush_open_tools(self) -> None:
         for queue in self._open_tools.values():
@@ -352,9 +348,7 @@ class _GeminiLiveTracer:
 class _TracedGeminiLiveSession:
     """Transparent proxy over ``google.genai.live.AsyncSession``."""
 
-    def __init__(
-        self, session: AsyncSession, tracer: _GeminiLiveTracer, trace: EventSession
-    ) -> None:
+    def __init__(self, session: AsyncSession, tracer: _GeminiLiveTracer, trace: EventSession) -> None:
         self._wrapped_session = session
         self._tracer = tracer
         self._trace = trace
@@ -373,9 +367,7 @@ class _TracedGeminiLiveSession:
         function_responses: FunctionResponseOrDict | Sequence[FunctionResponseOrDict],
     ) -> None:
         """Forward tool responses and use them to finish inferred tool spans."""
-        await self._wrapped_session.send_tool_response(
-            function_responses=function_responses
-        )
+        await self._wrapped_session.send_tool_response(function_responses=function_responses)
         observe_safely(self._tracer.observe_tool_responses, function_responses)
 
     def record_user_audio(self, pcm: bytes) -> None:
@@ -446,9 +438,7 @@ class _GeminiLiveTracingSession:
             model=self._model,
             is_agent_speaking=self._is_agent_speaking,
         )
-        return _TracedGeminiLiveSession(
-            self._wrapped_session, self._tracer, self._trace
-        )
+        return _TracedGeminiLiveSession(self._wrapped_session, self._tracer, self._trace)
 
     async def __aexit__(
         self,

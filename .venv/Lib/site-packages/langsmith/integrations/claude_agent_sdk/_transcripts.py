@@ -183,10 +183,7 @@ def _patch_llm_runs_from_transcripts(
             patched_stop += 1
 
     if patched_usage or patched_stop:
-        logger.debug(
-            f"Patched {patched_usage} usage and {patched_stop} stop reason(s) "
-            "onto LLM runs from transcripts"
-        )
+        logger.debug(f"Patched {patched_usage} usage and {patched_stop} stop reason(s) onto LLM runs from transcripts")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────

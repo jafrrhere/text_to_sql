@@ -87,8 +87,7 @@ except ImportError:
 
         def __init__(self, *args, **kwargs):
             raise ImportError(
-                "The `agents` package is not installed. "
-                "Please install it with `pip install langsmith[openai-agents]`."
+                "The `agents` package is not installed. Please install it with `pip install langsmith[openai-agents]`."
             )
 
 
@@ -305,25 +304,17 @@ if HAVE_AGENTS:
 
         def on_span_start(self, span: tracing.Span) -> None:
             # Find parent run
-            parent_run = (
-                self._runs.get(span.parent_id)
-                if span.parent_id
-                else self._runs.get(span.trace_id)
-            )
+            parent_run = self._runs.get(span.parent_id) if span.parent_id else self._runs.get(span.trace_id)
 
             if parent_run is None:
-                logger.warning(
-                    f"No trace info found for span, skipping: {span.span_id}"
-                )
+                logger.warning(f"No trace info found for span, skipping: {span.span_id}")
                 return
 
             # Extract span data
             run_name = agent_utils.get_run_name(span)
             if isinstance(span.span_data, tracing.ResponseSpanData):
                 parent_name = parent_run.name
-                raw_span_name = getattr(span, "name", None) or getattr(
-                    span.span_data, "name", None
-                )
+                raw_span_name = getattr(span, "name", None) or getattr(span.span_data, "name", None)
                 span_name = str(raw_span_name) if raw_span_name else run_name
                 if parent_name:
                     run_name = f"{parent_name} {span_name}".strip()
@@ -340,18 +331,14 @@ if HAVE_AGENTS:
                     run_type=run_type,
                     inputs=extracted.get("inputs", {}),
                     extra=extracted,
-                    start_time=datetime.fromisoformat(span.started_at)
-                    if span.started_at
-                    else None,
+                    start_time=datetime.fromisoformat(span.started_at) if span.started_at else None,
                 )
 
                 # Handoffs replace the caller rather than run as a tool, so
                 # a handoff agent has no tool ancestor and correctly stays
                 # untagged here.
                 metadata = child_run.extra.setdefault("metadata", {})
-                structural_tag = _resolve_openai_agents_ls_agent_type(
-                    span, parent_run, metadata.get("ls_agent_type")
-                )
+                structural_tag = _resolve_openai_agents_ls_agent_type(span, parent_run, metadata.get("ls_agent_type"))
                 if structural_tag is not None:
                     metadata["ls_agent_type"] = structural_tag
 

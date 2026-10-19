@@ -100,19 +100,11 @@ class _LiveEventView:
 
     @property
     def audio_chunks(self) -> list[bytes]:
-        return [
-            p.inline_data.data
-            for p in self._parts
-            if getattr(p, "inline_data", None) and p.inline_data.data
-        ]
+        return [p.inline_data.data for p in self._parts if getattr(p, "inline_data", None) and p.inline_data.data]
 
     @property
     def function_calls(self) -> list[Any]:
-        return [
-            p.function_call
-            for p in self._parts
-            if getattr(p, "function_call", None) and p.function_call.name
-        ]
+        return [p.function_call for p in self._parts if getattr(p, "function_call", None) and p.function_call.name]
 
     @property
     def function_responses(self) -> list[Any]:
@@ -285,9 +277,7 @@ class _AdkLiveTracer:
             self._flush_pending_agent_turn()
             self._pending_usage = None
 
-    def _emit_agent_turn(
-        self, event: Any, text: str, usage: dict[str, Any] | None
-    ) -> None:
+    def _emit_agent_turn(self, event: Any, text: str, usage: dict[str, Any] | None) -> None:
         """Record one ``output_transcription`` ``llm`` run with its usage.
 
         llm-kind (not chain) so LangSmith prices it; ls_provider + ls_model_name
@@ -351,9 +341,7 @@ class _AdkLiveTracer:
         if queue:
             run = queue.pop(0)
             self._prune_empty()
-            self._trace.close_span(
-                run, outputs=outputs, metadata={"raw_event": dump_event(event)}
-            )
+            self._trace.close_span(run, outputs=outputs, metadata={"raw_event": dump_event(event)})
             return
         with self._trace.event_span(
             event,
@@ -488,9 +476,7 @@ class LangSmithGoogleADKLivePlugin(BasePlugin):
 
     # -- app-fed audio --------------------------------------------------------
 
-    def record_user_audio(
-        self, pcm: bytes, *, session_id: Optional[str] = None
-    ) -> None:
+    def record_user_audio(self, pcm: bytes, *, session_id: Optional[str] = None) -> None:
         """Record a chunk of user (mic) PCM16 for the stereo conversation WAV.
 
         Pass ``session_id`` (the ADK session id) to disambiguate when multiple
@@ -503,9 +489,7 @@ class LangSmithGoogleADKLivePlugin(BasePlugin):
         except Exception:
             logger.debug("LangSmith: failed to record user audio", exc_info=True)
 
-    def record_agent_audio(
-        self, pcm: bytes, *, session_id: Optional[str] = None
-    ) -> None:
+    def record_agent_audio(self, pcm: bytes, *, session_id: Optional[str] = None) -> None:
         """Record a chunk of agent (played) PCM16 for the stereo conversation WAV.
 
         Pass ``session_id`` (the ADK session id) to disambiguate when multiple
@@ -522,9 +506,7 @@ class LangSmithGoogleADKLivePlugin(BasePlugin):
 
     async def before_run_callback(self, *, invocation_context: Any) -> None:
         try:
-            thread_id = (
-                self._thread_id_provider() if self._thread_id_provider else None
-            ) or str(uuid.uuid4())
+            thread_id = (self._thread_id_provider() if self._thread_id_provider else None) or str(uuid.uuid4())
             session = start_session(
                 thread_id=thread_id,
                 sample_rate=self._sample_rate,
@@ -539,9 +521,7 @@ class LangSmithGoogleADKLivePlugin(BasePlugin):
             )
             key = self._session_key(invocation_context)
             with self._lock:
-                self._sessions[key] = _AdkLiveTracer(
-                    session, model=_resolve_model(invocation_context)
-                )
+                self._sessions[key] = _AdkLiveTracer(session, model=_resolve_model(invocation_context))
         except Exception:
             logger.debug("LangSmith: failed to start live session", exc_info=True)
 

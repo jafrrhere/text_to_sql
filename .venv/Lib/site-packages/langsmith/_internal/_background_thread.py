@@ -195,21 +195,15 @@ def _tracing_thread_drain_compressed_buffer(
             if size_limit is not None and size_limit <= 0:
                 raise ValueError(f"size_limit must be positive; got {size_limit}")
             if size_limit_bytes is not None and size_limit_bytes < 0:
-                raise ValueError(
-                    f"size_limit_bytes must be nonnegative; got {size_limit_bytes}"
-                )
+                raise ValueError(f"size_limit_bytes must be nonnegative; got {size_limit_bytes}")
 
-            if (
-                size_limit_bytes is None or pre_compressed_size < size_limit_bytes
-            ) and (
+            if (size_limit_bytes is None or pre_compressed_size < size_limit_bytes) and (
                 size_limit is None or client.compressed_traces.trace_count < size_limit
             ):
                 return None, None, None
 
             # Write final boundary and close compression stream
-            client.compressed_traces.compressor_writer.write(
-                f"--{_BOUNDARY}--\r\n".encode()
-            )
+            client.compressed_traces.compressor_writer.write(f"--{_BOUNDARY}--\r\n".encode())
             client.compressed_traces.compressor_writer.close()
             current_size = client.compressed_traces.buffer.tell()
 
@@ -251,9 +245,7 @@ def _process_buffered_run_ops_batch(
 
         # Apply process_buffered_run_ops transformation
         if client._process_buffered_run_ops is None:
-            raise RuntimeError(
-                "process_buffered_run_ops should not be None when processing batch"
-            )
+            raise RuntimeError("process_buffered_run_ops should not be None when processing batch")
         processed_runs = list(client._process_buffered_run_ops(run_dicts))
 
         # Validate that the transformation preserves run count and IDs
@@ -271,9 +263,7 @@ def _process_buffered_run_ops_batch(
             )
 
         # Process each run and add to compressed traces
-        for (operation, _, write_ctx), processed_run in zip(
-            batch_to_process, processed_runs
-        ):
+        for (operation, _, write_ctx), processed_run in zip(batch_to_process, processed_runs):
             if operation == "post":
                 client._create_run(processed_run, **write_ctx)
             elif operation == "patch":
@@ -298,9 +288,7 @@ def _tracing_thread_handle_batch(
     batch: list[TracingQueueItem],
     use_multipart: bool,
     mark_task_done: bool = True,
-    ops: Optional[
-        list[Union[SerializedRunOperation, SerializedFeedbackOperation]]
-    ] = None,
+    ops: Optional[list[Union[SerializedRunOperation, SerializedFeedbackOperation]]] = None,
 ) -> None:
     """Handle a batch of tracing queue items by sending them to LangSmith.
 
@@ -327,9 +315,7 @@ def _tracing_thread_handle_batch(
             cookie,
         ), group_batch in grouped_batches.items():
             if not ops:
-                group_ops = combine_serialized_queue_operations(
-                    [item.item for item in group_batch]
-                )
+                group_ops = combine_serialized_queue_operations([item.item for item in group_batch])
             else:
                 group_ids = {item.item.id for item in group_batch}
                 group_ops = [op for op in ops if op.id in group_ids]
@@ -346,14 +332,8 @@ def _tracing_thread_handle_batch(
                 )
             else:
                 if any(isinstance(op, SerializedFeedbackOperation) for op in group_ops):
-                    logger.warning(
-                        "Feedback operations are not supported in non-multipart mode"
-                    )
-                    group_ops = [
-                        op
-                        for op in group_ops
-                        if not isinstance(op, SerializedFeedbackOperation)
-                    ]
+                    logger.warning("Feedback operations are not supported in non-multipart mode")
+                    group_ops = [op for op in group_ops if not isinstance(op, SerializedFeedbackOperation)]
                 client._batch_ingest_run_ops(
                     cast(list[SerializedRunOperation], group_ops),
                     api_url=api_url,
@@ -381,9 +361,7 @@ def _tracing_thread_handle_batch(
                     if "task_done() called too many times" in str(e):
                         # This can happen during shutdown when multiple threads
                         # process the same queue items. It's harmless.
-                        logger.debug(
-                            f"Ignoring harmless task_done error during shutdown: {e}"
-                        )
+                        logger.debug(f"Ignoring harmless task_done error during shutdown: {e}")
                     else:
                         raise
 
@@ -393,9 +371,7 @@ def _otel_tracing_thread_handle_batch(
     tracing_queue: Queue,
     batch: list[TracingQueueItem],
     mark_task_done: bool = True,
-    ops: Optional[
-        list[Union[SerializedRunOperation, SerializedFeedbackOperation]]
-    ] = None,
+    ops: Optional[list[Union[SerializedRunOperation, SerializedFeedbackOperation]]] = None,
 ) -> None:
     """Handle a batch of tracing queue items by exporting them to OTEL.
 
@@ -414,9 +390,7 @@ def _otel_tracing_thread_handle_batch(
 
         run_ops = [op for op in ops if isinstance(op, SerializedRunOperation)]
         otel_context_map = {
-            item.item.id: item.otel_context
-            for item in batch
-            if isinstance(item.item, SerializedRunOperation)
+            item.item.id: item.otel_context for item in batch if isinstance(item.item, SerializedRunOperation)
         }
         if run_ops:
             if client.otel_exporter is not None:
@@ -445,9 +419,7 @@ def _otel_tracing_thread_handle_batch(
                     if "task_done() called too many times" in str(e):
                         # This can happen during shutdown when multiple threads
                         # process the same queue items. It's harmless.
-                        logger.debug(
-                            f"Ignoring harmless task_done error during shutdown: {e}"
-                        )
+                        logger.debug(f"Ignoring harmless task_done error during shutdown: {e}")
                     else:
                         raise
 
@@ -479,9 +451,7 @@ def _hybrid_tracing_thread_handle_batch(
     # in parallel: there is one of these threads per drain loop, up to
     # _AUTO_SCALE_UP_NTHREADS_LIMIT of them. Each leg logs and swallows its own
     # errors, so neither can stop the other or kill this thread.
-    _tracing_thread_handle_batch(
-        client, tracing_queue, batch, use_multipart, False, ops
-    )
+    _tracing_thread_handle_batch(client, tracing_queue, batch, use_multipart, False, ops)
     _otel_tracing_thread_handle_batch(client, tracing_queue, batch, False, ops)
 
     # Mark all tasks as done once, only if requested
@@ -493,9 +463,7 @@ def _hybrid_tracing_thread_handle_batch(
                 if "task_done() called too many times" in str(e):
                     # This can happen during shutdown when multiple threads
                     # process the same queue items. It's harmless.
-                    logger.debug(
-                        f"Ignoring harmless task_done error during shutdown: {e}"
-                    )
+                    logger.debug(f"Ignoring harmless task_done error during shutdown: {e}")
                 else:
                     raise
 
@@ -508,10 +476,7 @@ def get_size_limit_from_env() -> Optional[int]:
         try:
             return int(size_limit_str)
         except ValueError:
-            logger.warning(
-                f"Invalid value for BATCH_INGEST_SIZE_LIMIT: {size_limit_str}, "
-                "continuing with default"
-            )
+            logger.warning(f"Invalid value for BATCH_INGEST_SIZE_LIMIT: {size_limit_str}, continuing with default")
     return None
 
 
@@ -549,9 +514,7 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
     size_limit: int = batch_ingest_config["size_limit"]
     scale_up_nthreads_limit: int = batch_ingest_config["scale_up_nthreads_limit"]
     scale_up_qsize_trigger: int = batch_ingest_config["scale_up_qsize_trigger"]
-    use_multipart = not client._multipart_disabled and batch_ingest_config.get(
-        "use_multipart_endpoint", True
-    )
+    use_multipart = not client._multipart_disabled and batch_ingest_config.get("use_multipart_endpoint", True)
 
     sub_threads: list[threading.Thread] = []
     # 1 for this func, 1 for getrefcount, 1 for _get_data_type_cached
@@ -559,19 +522,14 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
 
     # Disable compression if explicitly set, using OpenTelemetry, or zstd unavailable
     if not ZSTD_AVAILABLE:
-        logger.debug(
-            "zstandard package is not installed. "
-            "Falling back to uncompressed multipart ingestion."
-        )
+        logger.debug("zstandard package is not installed. Falling back to uncompressed multipart ingestion.")
     disable_compression = (
         ls_utils.is_env_var_truish("DISABLE_RUN_COMPRESSION")
         or client._tracing_mode in ("otel", "hybrid")
         or not ZSTD_AVAILABLE
     )
     if not disable_compression and use_multipart:
-        if not (client.info.instance_flags or {}).get(
-            "zstd_compression_enabled", False
-        ):
+        if not (client.info.instance_flags or {}).get("zstd_compression_enabled", False):
             logger.warning(
                 "Run compression is not enabled. Please update to the latest "
                 "version of LangSmith. Falling back to regular multipart ingestion."
@@ -590,9 +548,7 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
 
     def keep_thread_active() -> bool:
         # if `client.cleanup()` was called, stop thread
-        if not client or (
-            hasattr(client, "_manual_cleanup") and client._manual_cleanup
-        ):
+        if not client or (hasattr(client, "_manual_cleanup") and client._manual_cleanup):
             logger.debug("Client is being cleaned up, stopping tracing thread")
             return False
         if not threading.main_thread().is_alive():
@@ -625,10 +581,7 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
         for thread in sub_threads:
             if not thread.is_alive():
                 sub_threads.remove(thread)
-        if (
-            len(sub_threads) < scale_up_nthreads_limit
-            and tracing_queue.qsize() > scale_up_qsize_trigger
-        ):
+        if len(sub_threads) < scale_up_nthreads_limit and tracing_queue.qsize() > scale_up_qsize_trigger:
             new_thread = threading.Thread(
                 target=_tracing_sub_thread_func,
                 args=(weakref.ref(client), use_multipart),
@@ -638,27 +591,17 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
             new_thread.start()
 
         mode = client._tracing_mode
-        max_batch_size = (
-            client._max_batch_size_bytes
-            or batch_ingest_config.get("size_limit_bytes")
-            or 0
-        )
-        if next_batch := _tracing_thread_drain_queue(
-            tracing_queue, limit=size_limit, max_size_bytes=max_batch_size
-        ):
+        max_batch_size = client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
+        if next_batch := _tracing_thread_drain_queue(tracing_queue, limit=size_limit, max_size_bytes=max_batch_size):
             if mode == "hybrid":
                 logger.debug("Handling batch in hybrid mode")
-                _hybrid_tracing_thread_handle_batch(
-                    client, tracing_queue, next_batch, use_multipart
-                )
+                _hybrid_tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
             elif mode == "otel":
                 logger.debug("Handling batch in otel mode")
                 _otel_tracing_thread_handle_batch(client, tracing_queue, next_batch)
             else:
                 logger.debug("Handling batch in langsmith mode")
-                _tracing_thread_handle_batch(
-                    client, tracing_queue, next_batch, use_multipart
-                )
+                _tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
 
     # drain the queue on exit
     logger.debug(
@@ -666,40 +609,28 @@ def tracing_control_thread_func(client_ref: weakref.ref[Client]) -> None:
         tracing_queue.qsize(),
     )
     mode = client._tracing_mode
-    max_batch_size = (
-        client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
-    )
+    max_batch_size = client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
     while next_batch := _tracing_thread_drain_queue(
         tracing_queue, limit=size_limit, block=False, max_size_bytes=max_batch_size
     ):
         if mode == "hybrid":
             logger.debug("Draining batch in hybrid mode")
-            _hybrid_tracing_thread_handle_batch(
-                client, tracing_queue, next_batch, use_multipart
-            )
+            _hybrid_tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
         elif mode == "otel":
             logger.debug("Draining batch in otel mode")
             _otel_tracing_thread_handle_batch(client, tracing_queue, next_batch)
         else:
             logger.debug("Draining batch in langsmith mode")
-            _tracing_thread_handle_batch(
-                client, tracing_queue, next_batch, use_multipart
-            )
+            _tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
     logger.debug("Tracing control thread is shutting down")
 
 
-def tracing_control_thread_func_compress_parallel(
-    client_ref: weakref.ref[Client], flush_interval: float = 0.5
-) -> None:
+def tracing_control_thread_func_compress_parallel(client_ref: weakref.ref[Client], flush_interval: float = 0.5) -> None:
     client = client_ref()
     if client is None:
         return
     logger.debug("Tracing control thread func compress parallel called")
-    if (
-        client.compressed_traces is None
-        or client._data_available_event is None
-        or client._futures is None
-    ):
+    if client.compressed_traces is None or client._data_available_event is None or client._futures is None:
         logger.error(
             "LangSmith tracing error: Required compression attributes not "
             "initialized.\nThis may affect trace submission but does not "
@@ -709,18 +640,14 @@ def tracing_control_thread_func_compress_parallel(
 
     batch_ingest_config = _ensure_ingest_config(client.info)
     size_limit: int = batch_ingest_config["size_limit"]
-    size_limit_bytes = client._max_batch_size_bytes or batch_ingest_config.get(
-        "size_limit_bytes", 20_971_520
-    )
+    size_limit_bytes = client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes", 20_971_520)
     # One for this func, one for the parent thread, one for getrefcount,
     # one for _get_data_type_cached
     num_known_refs = 4
 
     def keep_thread_active() -> bool:
         # if `client.cleanup()` was called, stop thread
-        if not client or (
-            hasattr(client, "_manual_cleanup") and client._manual_cleanup
-        ):
+        if not client or (hasattr(client, "_manual_cleanup") and client._manual_cleanup):
             logger.debug("Client is being cleaned up, stopping compression thread")
             return False
         if not threading.main_thread().is_alive():
@@ -757,9 +684,9 @@ def tracing_control_thread_func_compress_parallel(
         if triggered:
             client._data_available_event.clear()
 
-            data_stream, compressed_traces_info, destinations = (
-                _tracing_thread_drain_compressed_buffer
-            )(client, size_limit, size_limit_bytes)
+            data_stream, compressed_traces_info, destinations = (_tracing_thread_drain_compressed_buffer)(
+                client, size_limit, size_limit_bytes
+            )
             # If we have data, submit the send request
             if data_stream is not None:
                 try:
@@ -784,9 +711,7 @@ def tracing_control_thread_func_compress_parallel(
                     data_stream,
                     compressed_traces_info,
                     destinations,
-                ) = _tracing_thread_drain_compressed_buffer(
-                    client, size_limit=1, size_limit_bytes=1
-                )
+                ) = _tracing_thread_drain_compressed_buffer(client, size_limit=1, size_limit_bytes=1)
                 if data_stream is not None:
                     try:
                         cf.wait(
@@ -809,11 +734,7 @@ def tracing_control_thread_func_compress_parallel(
 
     # Drain the buffer on exit (final flush)
     try:
-        trace_count = (
-            client.compressed_traces.trace_count
-            if client.compressed_traces is not None
-            else 0
-        )
+        trace_count = client.compressed_traces.trace_count if client.compressed_traces is not None else 0
         logger.debug(
             "Compression thread final flush: trace_count=%d",
             trace_count,
@@ -822,9 +743,7 @@ def tracing_control_thread_func_compress_parallel(
             final_data_stream,
             compressed_traces_info,
             destinations,
-        ) = _tracing_thread_drain_compressed_buffer(
-            client, size_limit=1, size_limit_bytes=1
-        )
+        ) = _tracing_thread_drain_compressed_buffer(client, size_limit=1, size_limit_bytes=1)
         if final_data_stream is not None:
             logger.debug(
                 "Compression thread final flush: sending %d bytes",
@@ -843,10 +762,7 @@ def tracing_control_thread_func_compress_parallel(
                 )
                 logger.debug("Compression thread final flush: send completed")
             except RuntimeError:
-                logger.debug(
-                    "Compression thread final flush: thread pool shutdown, "
-                    "sending synchronously"
-                )
+                logger.debug("Compression thread final flush: thread pool shutdown, sending synchronously")
                 client._send_compressed_multipart_req(
                     final_data_stream,
                     compressed_traces_info,
@@ -890,55 +806,38 @@ def _tracing_sub_thread_func(
         # the main thread dies
         threading.main_thread().is_alive()
         # or we've seen the queue empty 4 times in a row
-        and seen_successive_empty_queues
-        <= batch_ingest_config["scale_down_nempty_trigger"]
+        and seen_successive_empty_queues <= batch_ingest_config["scale_down_nempty_trigger"]
     ):
-        max_batch_size = (
-            client._max_batch_size_bytes
-            or batch_ingest_config.get("size_limit_bytes")
-            or 0
-        )
-        if next_batch := _tracing_thread_drain_queue(
-            tracing_queue, limit=size_limit, max_size_bytes=max_batch_size
-        ):
+        max_batch_size = client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
+        if next_batch := _tracing_thread_drain_queue(tracing_queue, limit=size_limit, max_size_bytes=max_batch_size):
             seen_successive_empty_queues = 0
 
             mode = client._tracing_mode
             if mode == "hybrid":
                 logger.debug("Sub-thread handling batch in hybrid mode")
-                _hybrid_tracing_thread_handle_batch(
-                    client, tracing_queue, next_batch, use_multipart
-                )
+                _hybrid_tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
             elif mode == "otel":
                 logger.debug("Sub-thread handling batch in otel mode")
                 _otel_tracing_thread_handle_batch(client, tracing_queue, next_batch)
             else:
                 logger.debug("Sub-thread handling batch in langsmith mode")
-                _tracing_thread_handle_batch(
-                    client, tracing_queue, next_batch, use_multipart
-                )
+                _tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
         else:
             seen_successive_empty_queues += 1
 
     # drain the queue on exit
     mode = client._tracing_mode
-    max_batch_size = (
-        client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
-    )
+    max_batch_size = client._max_batch_size_bytes or batch_ingest_config.get("size_limit_bytes") or 0
     while next_batch := _tracing_thread_drain_queue(
         tracing_queue, limit=size_limit, block=False, max_size_bytes=max_batch_size
     ):
         if mode == "hybrid":
             logger.debug("Sub-thread draining batch in hybrid mode")
-            _hybrid_tracing_thread_handle_batch(
-                client, tracing_queue, next_batch, use_multipart
-            )
+            _hybrid_tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
         elif mode == "otel":
             logger.debug("Sub-thread draining batch in otel mode")
             _otel_tracing_thread_handle_batch(client, tracing_queue, next_batch)
         else:
             logger.debug("Sub-thread draining batch in langsmith mode")
-            _tracing_thread_handle_batch(
-                client, tracing_queue, next_batch, use_multipart
-            )
+            _tracing_thread_handle_batch(client, tracing_queue, next_batch, use_multipart)
     logger.debug("Tracing control sub-thread is shutting down")

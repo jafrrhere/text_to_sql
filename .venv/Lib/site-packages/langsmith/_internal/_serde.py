@@ -191,10 +191,7 @@ def _serialize_json(obj: Any) -> Any:
                         return str(response)
                     return response
                 except Exception as e:
-                    logger.debug(
-                        f"Failed to use {attr} to serialize {type(obj)} to"
-                        f" JSON: {repr(e)}"
-                    )
+                    logger.debug(f"Failed to use {attr} to serialize {type(obj)} to JSON: {repr(e)}")
         return _simple_default(obj)
     except Exception as e:
         logger.debug(f"Failed to serialize {type(obj)} to JSON: {e}")
@@ -230,23 +227,14 @@ def _normalize_json_keys(obj: Any) -> Any:
     if isinstance(obj, dict):
         new: dict[Any, Any] = {}
         for key, value in obj.items():
-            norm_key: Any = (
-                _normalize_json_keys(key)
-                if isinstance(key, _JSON_KEY_TYPES)
-                else str(_simple_default(key))
-            )
+            norm_key: Any = _normalize_json_keys(key) if isinstance(key, _JSON_KEY_TYPES) else str(_simple_default(key))
             if norm_key in new:
-                logger.debug(
-                    "Dict key collision during JSON key normalization; "
-                    "an existing value will be overwritten."
-                )
+                logger.debug("Dict key collision during JSON key normalization; an existing value will be overwritten.")
             new[norm_key] = _normalize_json_keys(value)
         return new
     if isinstance(obj, list):
         return [_normalize_json_keys(value) for value in obj]
-    if isinstance(obj, tuple) and not (
-        hasattr(obj, "_asdict") and callable(obj._asdict)
-    ):
+    if isinstance(obj, tuple) and not (hasattr(obj, "_asdict") and callable(obj._asdict)):
         # Plain tuples recurse; NamedTuples are left for _serialize_json, which
         # converts them to dicts (preserving field names) before normalization.
         return tuple(_normalize_json_keys(value) for value in obj)
@@ -304,10 +292,7 @@ def dumps_json(obj: Any) -> bytes:
                 option=_ORJSON_OPTIONS,
             )
         except TypeError as retry_e:
-            logger.debug(
-                "Orjson serialization with normalized keys failed: "
-                f"{repr(retry_e)}. Falling back to json."
-            )
+            logger.debug(f"Orjson serialization with normalized keys failed: {repr(retry_e)}. Falling back to json.")
         result = json.dumps(
             normalized_obj,
             default=_serialize_json_with_normalized_keys,

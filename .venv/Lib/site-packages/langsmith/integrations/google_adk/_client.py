@@ -168,9 +168,7 @@ def wrap_runner_run(wrapped: Any, instance: Any, args: Any, kwargs: Any) -> Any:
     return _trace_run()
 
 
-async def wrap_runner_run_async(
-    wrapped: Any, instance: Any, args: Any, kwargs: Any
-) -> Any:
+async def wrap_runner_run_async(wrapped: Any, instance: Any, args: Any, kwargs: Any) -> Any:
     """Wrap Runner.run_async to create a root trace for asynchronous execution.
 
     When called from the background thread spawned by Runner.run, the root run
@@ -234,9 +232,7 @@ async def wrap_runner_run_async(
         yield event
 
 
-async def wrap_agent_run_async(
-    wrapped: Any, instance: Any, args: Any, kwargs: Any
-) -> Any:
+async def wrap_agent_run_async(wrapped: Any, instance: Any, args: Any, kwargs: Any) -> Any:
     """Wrap BaseAgent.run_async to create a chain span for each agent invocation."""
     parent = get_current_run_tree()
     if not parent:
@@ -268,9 +264,7 @@ async def wrap_agent_run_async(
             raise
 
 
-async def wrap_tool_run_async(
-    wrapped: Any, instance: Any, args: Any, kwargs: Any
-) -> Any:
+async def wrap_tool_run_async(wrapped: Any, instance: Any, args: Any, kwargs: Any) -> Any:
     """Wrap BaseTool.run_async (all tool subclasses) to trace tool invocations."""
     parent = get_current_run_tree()
     if not parent:
@@ -333,9 +327,7 @@ def _determine_llm_call_type(llm_request: Any, llm_response: Any) -> str:
         return "unknown"
 
 
-async def wrap_flow_call_llm_async(
-    wrapped: Any, instance: Any, args: Any, kwargs: Any
-) -> Any:
+async def wrap_flow_call_llm_async(wrapped: Any, instance: Any, args: Any, kwargs: Any) -> Any:
     """Wrap BaseLlmFlow._call_llm_async to capture LLM calls with TTFT tracking."""
     parent = get_current_run_tree()
     if not parent:
@@ -366,11 +358,7 @@ async def wrap_flow_call_llm_async(
             return
 
         model_name = extract_model_name(llm_request) if llm_request else None
-        messages = (
-            convert_llm_request_to_messages(llm_request, id_state)
-            if llm_request
-            else None
-        )
+        messages = convert_llm_request_to_messages(llm_request, id_state) if llm_request else None
         tools = extract_tools_from_llm_request(llm_request) if llm_request else []
 
         if messages:
@@ -405,9 +393,7 @@ async def wrap_flow_call_llm_async(
                         llm_run.add_event(
                             {
                                 "name": "new_token",
-                                "time": datetime.fromtimestamp(
-                                    first_token_time, tz=timezone.utc
-                                ).isoformat(),
+                                "time": datetime.fromtimestamp(first_token_time, tz=timezone.utc).isoformat(),
                             }
                         )
                     except Exception as e:
@@ -424,11 +410,7 @@ async def wrap_flow_call_llm_async(
         outputs: dict[str, Any] = {"role": "assistant"}
         content_source = event_with_content or last_event
 
-        if (
-            content_source
-            and hasattr(content_source, "content")
-            and content_source.content
-        ):
+        if content_source and hasattr(content_source, "content") and content_source.content:
             parts = getattr(content_source.content, "parts", None) or []
             text_parts: list[str] = []
             tool_calls: list[dict[str, Any]] = []
@@ -449,9 +431,7 @@ async def wrap_flow_call_llm_async(
                             "type": "function",
                             "function": {
                                 "name": getattr(fc, "name", ""),
-                                "arguments": json.dumps(
-                                    dict(fc.args) if getattr(fc, "args", None) else {}
-                                ),
+                                "arguments": json.dumps(dict(fc.args) if getattr(fc, "args", None) else {}),
                             },
                         }
                     )
@@ -465,13 +445,11 @@ async def wrap_flow_call_llm_async(
                 llm_run.extra.setdefault("metadata", {})["usage_metadata"] = usage
 
         if first_token_time is not None:
-            llm_run.extra.setdefault("metadata", {})["time_to_first_token"] = (
-                first_token_time - start_time
-            )
+            llm_run.extra.setdefault("metadata", {})["time_to_first_token"] = first_token_time - start_time
 
         if last_event and llm_request:
-            llm_run.extra.setdefault("metadata", {})["llm_call_type"] = (
-                _determine_llm_call_type(llm_request, last_event)
+            llm_run.extra.setdefault("metadata", {})["llm_call_type"] = _determine_llm_call_type(
+                llm_request, last_event
             )
 
         llm_run.end(outputs=outputs)

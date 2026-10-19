@@ -66,11 +66,7 @@ except ImportError:
                 elif enable_serialize_numpy and hasattr(o, "tolist"):
                     # even objects like np.uint16(15) have a .tolist() function
                     resolved = o.tolist()
-                elif (
-                    enable_serialize_dataclass
-                    and dataclasses.is_dataclass(o)
-                    and not isinstance(o, type)
-                ):
+                elif enable_serialize_dataclass and dataclasses.is_dataclass(o) and not isinstance(o, type):
                     resolved = dataclasses.asdict(o)
                 elif default is not None:
                     resolved = default(o)

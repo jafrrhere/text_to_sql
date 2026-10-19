@@ -14,9 +14,7 @@ T = TypeVar("T")
 
 def exec_git(command: List[str]) -> Optional[str]:
     try:
-        return subprocess.check_output(
-            ["git"] + command, encoding="utf-8", stderr=subprocess.DEVNULL
-        ).strip()
+        return subprocess.check_output(["git"] + command, encoding="utf-8", stderr=subprocess.DEVNULL).strip()
     except BaseException:
         return None
 
@@ -75,9 +73,7 @@ def get_git_info(remote: str = "origin") -> GitInfo:
         "commit": exec_git(["rev-parse", "HEAD"]),
         "commit_time": exec_git(["log", "-1", "--format=%ct"]),
         "branch": exec_git(["rev-parse", "--abbrev-ref", "HEAD"]),
-        "tags": exec_git(
-            ["describe", "--tags", "--exact-match", "--always", "--dirty"]
-        ),
+        "tags": exec_git(["describe", "--tags", "--exact-match", "--always", "--dirty"]),
         "dirty": exec_git(["status", "--porcelain"]) != "",
         "author_name": exec_git(["log", "-1", "--format=%an"]),
         "author_email": exec_git(["log", "-1", "--format=%ae"]),

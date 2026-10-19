@@ -47,9 +47,7 @@ def extract_usage_metadata(usage: Any) -> dict[str, Any]:
     if not usage:
         return {}
 
-    get = (
-        usage.get if isinstance(usage, dict) else lambda k, d=None: getattr(usage, k, d)
-    )
+    get = usage.get if isinstance(usage, dict) else lambda k, d=None: getattr(usage, k, d)
 
     raw_input = _to_int(get("input_tokens"))
     output_tokens = _to_int(get("output_tokens"))
@@ -202,16 +200,10 @@ def read_llm_turns_from_transcript(
                     # Detect tool_result blocks and format as tool
                     # messages, matching the live stream formatting.
                     if isinstance(content, list) and content:
-                        is_tool_result = any(
-                            isinstance(b, dict) and b.get("type") == "tool_result"
-                            for b in content
-                        )
+                        is_tool_result = any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
                         if is_tool_result:
                             for block in content:
-                                if (
-                                    isinstance(block, dict)
-                                    and block.get("type") == "tool_result"
-                                ):
+                                if isinstance(block, dict) and block.get("type") == "tool_result":
                                     conversation.append(
                                         {
                                             "role": "tool",

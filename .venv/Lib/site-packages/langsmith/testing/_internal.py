@@ -362,10 +362,7 @@ def test(*args: Any, **kwargs: Any) -> Callable:
         warnings.warn(f"Unexpected keyword arguments: {kwargs.keys()}")
     disable_tracking = ls_utils.test_tracking_is_disabled()
     if disable_tracking:
-        logger.info(
-            "LANGSMITH_TEST_TRACKING is set to 'false'."
-            " Skipping LangSmith test tracking."
-        )
+        logger.info("LANGSMITH_TEST_TRACKING is set to 'false'. Skipping LangSmith test tracking.")
 
     def decorator(func: Callable) -> Callable:
         # Handle repetitions
@@ -374,9 +371,7 @@ def test(*args: Any, **kwargs: Any) -> Callable:
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
-            async def async_wrapper(
-                *test_args: Any, request: Any = None, **test_kwargs: Any
-            ):
+            async def async_wrapper(*test_args: Any, request: Any = None, **test_kwargs: Any):
                 if disable_tracking:
                     return await func(*test_args, **test_kwargs)
 
@@ -453,9 +448,7 @@ def _get_test_suite_name(func: Callable) -> str:
     raise ValueError("Please set the LANGSMITH_TEST_SUITE environment variable.")
 
 
-def _get_test_suite(
-    client: ls_client.Client, test_suite_name: str
-) -> ls_schemas.Dataset:
+def _get_test_suite(client: ls_client.Client, test_suite_name: str) -> ls_schemas.Dataset:
     if client.has_dataset(dataset_name=test_suite_name):
         return client.read_dataset(dataset_name=test_suite_name)
     else:
@@ -508,9 +501,7 @@ def _get_example_id(
     return uuid.uuid5(UUID5_NAMESPACE, identifier)
 
 
-def _get_example_id_legacy(
-    func: Callable, inputs: Optional[dict], suite_id: uuid.UUID
-) -> tuple[uuid.UUID, str]:
+def _get_example_id_legacy(func: Callable, inputs: Optional[dict], suite_id: uuid.UUID) -> tuple[uuid.UUID, str]:
     try:
         file_path = str(Path(inspect.getfile(func)).relative_to(Path.cwd()))
     except ValueError:
@@ -518,9 +509,7 @@ def _get_example_id_legacy(
         file_path = func.__module__
     identifier = f"{suite_id}{file_path}::{func.__name__}"
     # If parametrized test, need to add inputs to identifier:
-    if hasattr(func, "pytestmark") and any(
-        m.name == "parametrize" for m in func.pytestmark
-    ):
+    if hasattr(func, "pytestmark") and any(m.name == "parametrize" for m in func.pytestmark):
         identifier += _stringify(inputs)
     return uuid.uuid5(uuid.NAMESPACE_DNS, identifier), identifier[len(str(suite_id)) :]
 
@@ -613,9 +602,7 @@ class _LangSmithTestSuite:
             if test_suite_name not in cls._instances:
                 test_suite = _get_test_suite(client, test_suite_name)
                 experiment = _start_experiment(client, test_suite, experiment_metadata)
-                cls._instances[test_suite_name] = cls(
-                    client, experiment, test_suite, experiment_metadata
-                )
+                cls._instances[test_suite_name] = cls(client, experiment, test_suite, experiment_metadata)
         return cls._instances[test_suite_name]
 
     @property
@@ -712,10 +699,7 @@ class _LangSmithTestSuite:
                 or (outputs is not None and outputs != example.outputs)
                 or (metadata is not None and metadata != example.metadata)
                 or str(example.dataset_id) != str(self.id)
-                or (
-                    normalized_split is not None
-                    and existing_dataset_split != normalized_split
-                )
+                or (normalized_split is not None and existing_dataset_split != normalized_split)
             ):
                 self.client.update_example(
                     example_id=example.id,
@@ -728,11 +712,7 @@ class _LangSmithTestSuite:
                 example = self.client.read_example(example_id=example.id)
         if self._dataset_version is None:
             self._dataset_version = example.modified_at
-        elif (
-            example.modified_at
-            and self._dataset_version
-            and example.modified_at > self._dataset_version
-        ):
+        elif example.modified_at and self._dataset_version and example.modified_at > self._dataset_version:
             self._dataset_version = example.modified_at
 
     def _submit_feedback(
@@ -751,12 +731,8 @@ class _LangSmithTestSuite:
         for fb in feedback:
             if pytest_plugin and pytest_nodeid:
                 val = fb["score"] if "score" in fb else fb["value"]
-                pytest_plugin.update_process_status(
-                    pytest_nodeid, {"feedback": {fb["key"]: val}}
-                )
-            self._executor.submit(
-                self._create_feedback, run_id=run_id, feedback=fb, **kwargs
-            )
+                pytest_plugin.update_process_status(pytest_nodeid, {"feedback": {fb["key"]: val}})
+            self._executor.submit(self._create_feedback, run_id=run_id, feedback=fb, **kwargs)
 
     def _create_feedback(self, run_id: ID_TYPE, feedback: dict, **kwargs: Any) -> None:
         # trace_id will always be run_id here because the feedback is on the root
@@ -841,9 +817,7 @@ class _TestCase:
         self._logged_outputs: Optional[dict] = None
 
         if pytest_plugin and pytest_nodeid:
-            pytest_plugin.add_process_to_test_suite(
-                test_suite._dataset.name, pytest_nodeid
-            )
+            pytest_plugin.add_process_to_test_suite(test_suite._dataset.name, pytest_nodeid)
             if inputs:
                 self.log_inputs(inputs)
             if reference_outputs:
@@ -867,23 +841,17 @@ class _TestCase:
     def log_inputs(self, inputs: dict) -> None:
         self.inputs = inputs
         if self.pytest_plugin and self.pytest_nodeid:
-            self.pytest_plugin.update_process_status(
-                self.pytest_nodeid, {"inputs": inputs}
-            )
+            self.pytest_plugin.update_process_status(self.pytest_nodeid, {"inputs": inputs})
 
     def log_outputs(self, outputs: dict) -> None:
         self._logged_outputs = outputs
         if self.pytest_plugin and self.pytest_nodeid:
-            self.pytest_plugin.update_process_status(
-                self.pytest_nodeid, {"outputs": outputs}
-            )
+            self.pytest_plugin.update_process_status(self.pytest_nodeid, {"outputs": outputs})
 
     def log_reference_outputs(self, reference_outputs: dict) -> None:
         self._logged_reference_outputs = reference_outputs
         if self.pytest_plugin and self.pytest_nodeid:
-            self.pytest_plugin.update_process_status(
-                self.pytest_nodeid, {"reference_outputs": reference_outputs}
-            )
+            self.pytest_plugin.update_process_status(self.pytest_nodeid, {"reference_outputs": reference_outputs})
 
     def submit_test_result(
         self,
@@ -891,9 +859,7 @@ class _TestCase:
         skipped: bool = False,
     ) -> None:
         if self.run_start_time is None:
-            raise ValueError(
-                "Cannot submit a test result before the test run has started."
-            )
+            raise ValueError("Cannot submit a test result before the test run has started.")
         return self.test_suite.submit_result(
             self.run_id,
             self.run_start_time,
@@ -905,15 +871,11 @@ class _TestCase:
 
     def start_time(self) -> None:
         if self.pytest_plugin and self.pytest_nodeid:
-            self.pytest_plugin.update_process_status(
-                self.pytest_nodeid, {"start_time": time.time()}
-            )
+            self.pytest_plugin.update_process_status(self.pytest_nodeid, {"start_time": time.time()})
 
     def end_time(self) -> None:
         if self.pytest_plugin and self.pytest_nodeid:
-            self.pytest_plugin.update_process_status(
-                self.pytest_nodeid, {"end_time": time.time()}
-            )
+            self.pytest_plugin.update_process_status(self.pytest_nodeid, {"end_time": time.time()})
 
     def end_run(self, run_tree, outputs: Any) -> None:
         if not (outputs is None or isinstance(outputs, dict)):
@@ -978,40 +940,27 @@ def _create_test_case(
     if output_keys:
         outputs = {}
         if not inputs:
-            msg = (
-                "'output_keys' should only be specified when marked test function has "
-                "input arguments."
-            )
+            msg = "'output_keys' should only be specified when marked test function has input arguments."
             raise ValueError(msg)
         for k in output_keys:
             outputs[k] = inputs.pop(k, None)
-    test_suite = _LangSmithTestSuite.from_test(
-        client, func, langtest_extra.get("test_suite_name"), experiment_metadata
-    )
+    test_suite = _LangSmithTestSuite.from_test(client, func, langtest_extra.get("test_suite_name"), experiment_metadata)
     example_id = langtest_extra["id"]
     dataset_sdk_version = (
         test_suite._dataset.metadata
         and test_suite._dataset.metadata.get("runtime")
         and test_suite._dataset.metadata.get("runtime", {}).get("sdk_version")
     )
-    if not dataset_sdk_version or not ls_utils.is_version_greater_or_equal(
-        dataset_sdk_version, "0.4.33"
-    ):
-        legacy_example_id, example_name = _get_example_id_legacy(
-            func, inputs, test_suite.id
-        )
+    if not dataset_sdk_version or not ls_utils.is_version_greater_or_equal(dataset_sdk_version, "0.4.33"):
+        legacy_example_id, example_name = _get_example_id_legacy(func, inputs, test_suite.id)
         example_id = example_id or legacy_example_id
     pytest_plugin = (
-        pytest_request.config.pluginmanager.get_plugin("langsmith_output_plugin")
-        if pytest_request
-        else None
+        pytest_request.config.pluginmanager.get_plugin("langsmith_output_plugin") if pytest_request else None
     )
     pytest_nodeid = pytest_request.node.nodeid if pytest_request else None
     if pytest_plugin:
         pytest_plugin.test_suite_urls[test_suite._dataset.name] = (
-            cast(str, test_suite._dataset.url)
-            + "/compare?selectedSessions="
-            + str(test_suite.experiment_id)
+            cast(str, test_suite._dataset.url) + "/compare?selectedSessions=" + str(test_suite.experiment_id)
         )
     test_case = _TestCase(
         test_suite,
@@ -1079,9 +1028,7 @@ def _run_test(
         try:
             test_case.submit_test_result()
         except BaseException as e:
-            logger.warning(
-                f"Failed to create feedback for run_id {test_case.run_id}:\n{e}"
-            )
+            logger.warning(f"Failed to create feedback for run_id {test_case.run_id}:\n{e}")
 
     if langtest_extra["cache"]:
         cache_path = Path(langtest_extra["cache"]) / f"{test_case.test_suite.id}.yaml"
@@ -1100,9 +1047,7 @@ def _run_test(
 
     with (
         rh.tracing_context(**{**current_context, "metadata": metadata}),
-        ls_utils.with_optional_cache(
-            cache_path, ignore_hosts=ignore_hosts, allow_hosts=allow_hosts
-        ),
+        ls_utils.with_optional_cache(cache_path, ignore_hosts=ignore_hosts, allow_hosts=allow_hosts),
     ):
         _test()
 
@@ -1160,9 +1105,7 @@ async def _arun_test(
         try:
             test_case.submit_test_result()
         except BaseException as e:
-            logger.warning(
-                f"Failed to create feedback for run_id {test_case.run_id}:\n{e}"
-            )
+            logger.warning(f"Failed to create feedback for run_id {test_case.run_id}:\n{e}")
 
     if langtest_extra["cache"]:
         cache_path = Path(langtest_extra["cache"]) / f"{test_case.test_suite.id}.yaml"
@@ -1183,9 +1126,7 @@ async def _arun_test(
 
     with (
         rh.tracing_context(**{**current_context, "metadata": metadata}),
-        ls_utils.with_optional_cache(
-            cache_path, ignore_hosts=ignore_hosts, allow_hosts=allow_hosts
-        ),
+        ls_utils.with_optional_cache(cache_path, ignore_hosts=ignore_hosts, allow_hosts=allow_hosts),
     ):
         await _test()
 
@@ -1293,16 +1234,11 @@ def log_reference_outputs(reference_outputs: dict, /) -> None:
         ```
     """
     if ls_utils.test_tracking_is_disabled():
-        logger.info(
-            "LANGSMITH_TEST_TRACKING is set to 'false'. Skipping log_reference_outputs."
-        )
+        logger.info("LANGSMITH_TEST_TRACKING is set to 'false'. Skipping log_reference_outputs.")
         return
     test_case = _TEST_CASE.get()
     if not test_case:
-        msg = (
-            "log_reference_outputs should only be called within a pytest test "
-            "decorated with @pytest.mark.langsmith."
-        )
+        msg = "log_reference_outputs should only be called within a pytest test decorated with @pytest.mark.langsmith."
         raise ValueError(msg)
     test_case.log_reference_outputs(reference_outputs)
 
@@ -1369,13 +1305,9 @@ def log_feedback(
             "LANGSMITH_TRACING environment variable to 'true')."
         )
         raise ValueError(msg)
-    if run_tree.session_name == "evaluators" and run_tree.metadata.get(
-        "reference_run_id"
-    ):
+    if run_tree.session_name == "evaluators" and run_tree.metadata.get("reference_run_id"):
         run_id = run_tree.metadata["reference_run_id"]
-        run_tree.add_outputs(
-            feedback if isinstance(feedback, dict) else {"feedback": feedback}
-        )
+        run_tree.add_outputs(feedback if isinstance(feedback, dict) else {"feedback": feedback})
         kwargs["source_run_id"] = run_tree.id
     else:
         run_id = run_tree.trace_id
@@ -1383,9 +1315,7 @@ def log_feedback(
 
 
 @contextlib.contextmanager
-def trace_feedback(
-    *, name: str = "Feedback"
-) -> Generator[Optional[run_trees.RunTree], None, None]:
+def trace_feedback(*, name: str = "Feedback") -> Generator[Optional[run_trees.RunTree], None, None]:
     """Trace the computation of a pytest run feedback as its own run.
 
     Args:
@@ -1435,9 +1365,7 @@ def trace_feedback(
                 )
                 # Make sure to log relevant feedback within the context for the
                 # trace to be associated with this feedback.
-                t.log_feedback(
-                    key="llm_judge", score=float(grade.choices[0].message.content)
-                )
+                t.log_feedback(key="llm_judge", score=float(grade.choices[0].message.content))
 
             assert "hello" in response.choices[0].message.content.lower()
         ```

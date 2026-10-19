@@ -142,9 +142,7 @@ def _make_sequence_wrapper(name: str) -> Any:
 
     def wrapper(self: LangSmithSecret, *args: Any, **kwargs: Any) -> Any:
         result = base(self, *args, **kwargs)
-        return type(result)(
-            LangSmithSecret(item) if type(item) is str else item for item in result
-        )
+        return type(result)(LangSmithSecret(item) if type(item) is str else item for item in result)
 
     wrapper.__name__ = name
     wrapper.__qualname__ = f"LangSmithSecret.{name}"
@@ -194,9 +192,7 @@ def _redact_secrets(obj: Any) -> Any:
     if isinstance(obj, LangSmithSecret):
         return LANGSMITH_SECRET_MASK
     if isinstance(obj, dict):
-        return {
-            _redact_secrets(key): _redact_secrets(value) for key, value in obj.items()
-        }
+        return {_redact_secrets(key): _redact_secrets(value) for key, value in obj.items()}
     if isinstance(obj, list):
         return [_redact_secrets(value) for value in obj]
     if isinstance(obj, tuple):

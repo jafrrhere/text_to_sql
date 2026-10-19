@@ -186,16 +186,12 @@ def _oauth_metadata_urls(base: str) -> list[str]:
     are identical.
     """
     parts = urllib.parse.urlsplit(base)
-    inserted = urllib.parse.urlunsplit(
-        (parts.scheme, parts.netloc, f"{_WELL_KNOWN_OAUTH_PATH}{parts.path}", "", "")
-    )
+    inserted = urllib.parse.urlunsplit((parts.scheme, parts.netloc, f"{_WELL_KNOWN_OAUTH_PATH}{parts.path}", "", ""))
     appended = f"{base}{_WELL_KNOWN_OAUTH_PATH}"
     return [inserted] if inserted == appended else [inserted, appended]
 
 
-def _fetch_oauth_metadata(
-    url: str, base: str, timeout: float
-) -> Optional[Mapping[str, Any]]:
+def _fetch_oauth_metadata(url: str, base: str, timeout: float) -> Optional[Mapping[str, Any]]:
     try:
         response = requests.get(
             url,
@@ -218,9 +214,7 @@ def _fetch_oauth_metadata(
     return doc
 
 
-def _resolve_token_endpoint(
-    api_url: str, timeout: float = _OAUTH_DISCOVERY_TIMEOUT
-) -> str:
+def _resolve_token_endpoint(api_url: str, timeout: float = _OAUTH_DISCOVERY_TIMEOUT) -> str:
     """Resolve the token endpoint, preferring the deployment's metadata.
 
     Falls back to ``<mount>/oauth/token`` when no usable document is served. The
@@ -259,17 +253,13 @@ def should_refresh_profile_token(profile: ProfileConfig) -> bool:
     parsed = _parse_profile_expires_at(expires_at)
     if parsed is None:
         return False
-    return (
-        parsed <= datetime.datetime.now(datetime.timezone.utc) + _TOKEN_REFRESH_LEEWAY
-    )
+    return parsed <= datetime.datetime.now(datetime.timezone.utc) + _TOKEN_REFRESH_LEEWAY
 
 
 def _refresh_profile_oauth_token(
     api_url: Optional[str], refresh_token: str, timeout: float = _TOKEN_REFRESH_TIMEOUT
 ) -> Optional[dict[str, Any]]:
-    token_endpoint = _resolve_token_endpoint(
-        api_url or "https://api.smith.langchain.com"
-    )
+    token_endpoint = _resolve_token_endpoint(api_url or "https://api.smith.langchain.com")
     try:
         response = requests.post(
             token_endpoint,
@@ -294,9 +284,7 @@ def _refresh_profile_oauth_token(
     return token
 
 
-def _apply_profile_token_response(
-    profile: ProfileConfig, token: Mapping[str, Any]
-) -> None:
+def _apply_profile_token_response(profile: ProfileConfig, token: Mapping[str, Any]) -> None:
     oauth = profile.setdefault("oauth", {})
     access_token = token.get("access_token")
     if isinstance(access_token, str) and access_token:
@@ -306,9 +294,7 @@ def _apply_profile_token_response(
         oauth["refresh_token"] = refresh_token
     expires_in = token.get("expires_in")
     if isinstance(expires_in, (int, float)) and expires_in > 0:
-        expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-            seconds=expires_in
-        )
+        expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=expires_in)
         oauth["expires_at"] = expires_at.isoformat().replace("+00:00", "Z")
 
 
@@ -431,17 +417,13 @@ class ProfileAuth:
                     profile = fresh
                     if not should_refresh_profile_token(profile):
                         return profile
-                refresh_token = trim_auth_value(
-                    (profile.get("oauth") or {}).get("refresh_token")
-                )
+                refresh_token = trim_auth_value((profile.get("oauth") or {}).get("refresh_token"))
                 if refresh_token is None:
                     return profile
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     return profile
-                token = _refresh_profile_oauth_token(
-                    profile.get("api_url"), refresh_token, timeout=remaining
-                )
+                token = _refresh_profile_oauth_token(profile.get("api_url"), refresh_token, timeout=remaining)
                 if token is None:
                     return profile
                 _apply_profile_token_response(profile, token)
@@ -459,9 +441,7 @@ class ProfileAuth:
         api_key = trim_auth_value(profile.get("api_key"))
         if api_key:
             return {self._api_key_header: api_key}
-        oauth_access_token = trim_auth_value(
-            (profile.get("oauth") or {}).get("access_token")
-        )
+        oauth_access_token = trim_auth_value((profile.get("oauth") or {}).get("access_token"))
         if oauth_access_token:
             return {"Authorization": f"Bearer {oauth_access_token}"}
         return {}
@@ -475,10 +455,7 @@ class ProfileAuth:
         return (name.lower(), value) in self._managed_auth_headers
 
     def _has_auth_header(self, headers: Mapping[str, str]) -> bool:
-        return any(
-            self._is_auth_header_name(name) and bool(value)
-            for name, value in headers.items()
-        )
+        return any(self._is_auth_header_name(name) and bool(value) for name, value in headers.items())
 
     def _is_auth_header_name(self, name: str) -> bool:
         return name.lower() in {"authorization", self._api_key_header.lower()}

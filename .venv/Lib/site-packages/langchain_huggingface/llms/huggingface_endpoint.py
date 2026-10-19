@@ -17,6 +17,8 @@ from langchain_core.utils import from_env, get_pydantic_field_names
 from pydantic import ConfigDict, Field, model_validator
 from typing_extensions import Self
 
+from langchain_huggingface._version import __version__
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,7 +108,8 @@ class HuggingFaceEndpoint(LLM):
         available providers can be found in the [huggingface_hub documentation](https://huggingface.co/docs/huggingface_hub/guides/inference#supported-providers-and-tasks)."""
 
     huggingfacehub_api_token: str | None = Field(
-        default_factory=from_env("HUGGINGFACEHUB_API_TOKEN", default=None)
+        default_factory=from_env("HUGGINGFACEHUB_API_TOKEN", default=None),
+        repr=False,
     )
 
     max_new_tokens: int = 512
@@ -248,6 +251,12 @@ class HuggingFaceEndpoint(LLM):
             )
             raise ValueError(msg)
         return values
+
+    @model_validator(mode="after")
+    def _set_huggingface_version(self) -> Self:
+        """Set package version in metadata."""
+        self._add_version("langchain-huggingface", __version__)
+        return self
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:

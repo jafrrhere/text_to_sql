@@ -8,9 +8,7 @@ from requests_toolbelt import (  # type: ignore[import-untyped]
     multipart as rqtb_multipart,
 )
 
-MultipartPart = tuple[
-    str, tuple[None, Union[bytes, BufferedReader], str, dict[str, str]]
-]
+MultipartPart = tuple[str, tuple[None, Union[bytes, BufferedReader], str, dict[str, str]]]
 
 
 class MultipartPartsAndContext:
@@ -108,10 +106,7 @@ class RewindableMultipartBody:
 
     def seek(self, pos: int, whence: int = 0) -> int:
         if (pos, whence) != (0, 0):
-            raise OSError(
-                f"{type(self).__name__} only rewinds to the start, "
-                f"got seek({pos}, {whence})"
-            )
+            raise OSError(f"{type(self).__name__} only rewinds to the start, got seek({pos}, {whence})")
         self._encoder = self._encode()
         self._pos = 0
         return 0

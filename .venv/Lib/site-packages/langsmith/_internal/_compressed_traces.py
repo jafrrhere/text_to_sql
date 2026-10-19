@@ -18,9 +18,7 @@ compression_level = int(ls_utils.get_env_var("RUN_COMPRESSION_LEVEL") or 1)
 # in RAM on many-core hosts. Compression still runs off the caller's thread.
 # `RUN_COMPRESSION_THREADS=0` compresses inline on the tracing thread instead.
 _compression_threads_env = ls_utils.get_env_var("RUN_COMPRESSION_THREADS")
-compression_threads = (
-    int(_compression_threads_env) if _compression_threads_env is not None else 1
-)
+compression_threads = int(_compression_threads_env) if _compression_threads_env is not None else 1
 
 DEFAULT_MAX_UNCOMPRESSED_QUEUE_BYTES = 1024 * 1024 * 1024  # 1GB
 
@@ -54,9 +52,9 @@ class CompressedTraces:
         # is sent, so a client whose replicas change is not stuck on the first set.
         self.destinations: Optional[frozenset] = None
 
-        self.compressor_writer = ZstdCompressor(
-            level=compression_level, threads=compression_threads
-        ).stream_writer(self.buffer, closefd=False)
+        self.compressor_writer = ZstdCompressor(level=compression_level, threads=compression_threads).stream_writer(
+            self.buffer, closefd=False
+        )
 
     def accepts(self, destinations: frozenset) -> bool:
         """Report whether an op for `destinations` may join this frame.
@@ -72,6 +70,6 @@ class CompressedTraces:
         self.trace_count = 0
         self.uncompressed_size = 0
         self._context = []
-        self.compressor_writer = ZstdCompressor(
-            level=compression_level, threads=compression_threads
-        ).stream_writer(self.buffer, closefd=False)
+        self.compressor_writer = ZstdCompressor(level=compression_level, threads=compression_threads).stream_writer(
+            self.buffer, closefd=False
+        )

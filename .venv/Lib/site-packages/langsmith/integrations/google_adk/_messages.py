@@ -31,11 +31,7 @@ def _serialize_part(part: Any) -> dict[str, Any]:
         data = getattr(part.inline_data, "data", None)
         mime_type = getattr(part.inline_data, "mime_type", "application/octet-stream")
         if data is not None:
-            encoded = (
-                base64.b64encode(data).decode("utf-8")
-                if isinstance(data, bytes)
-                else str(data)
-            )
+            encoded = base64.b64encode(data).decode("utf-8") if isinstance(data, bytes) else str(data)
             return {"type": "image", "data": encoded, "mime_type": mime_type}
 
     if hasattr(part, "file_data") and part.file_data:
@@ -143,9 +139,7 @@ class ToolIdState:
         return str(pending.popleft() if pending else "")
 
 
-def convert_llm_request_to_messages(
-    llm_request: Any, id_state: ToolIdState | None = None
-) -> list[dict[str, Any]]:
+def convert_llm_request_to_messages(llm_request: Any, id_state: ToolIdState | None = None) -> list[dict[str, Any]]:
     """Convert LlmRequest to OpenAI-compatible message format."""
     messages: list[dict[str, Any]] = []
 

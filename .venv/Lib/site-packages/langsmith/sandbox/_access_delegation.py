@@ -31,22 +31,16 @@ def _validate_access_delegation(value: Any) -> AccessDelegation:
         raise ValueError('access_delegation["mode"] must be "INHERIT" or "EXPLICIT"')
 
     permissions = value.get("permissions")
-    if permissions is not None and (
-        isinstance(permissions, str) or not isinstance(permissions, Sequence)
-    ):
+    if permissions is not None and (isinstance(permissions, str) or not isinstance(permissions, Sequence)):
         raise ValueError('access_delegation["permissions"] must be a list of strings')
 
     if mode == "INHERIT":
         if permissions:
-            raise ValueError(
-                'access_delegation["permissions"] is not allowed with mode "INHERIT"'
-            )
+            raise ValueError('access_delegation["permissions"] is not allowed with mode "INHERIT"')
         return {"mode": "INHERIT"}
 
     if not permissions:
-        raise ValueError(
-            'access_delegation["permissions"] is required with mode "EXPLICIT"'
-        )
+        raise ValueError('access_delegation["permissions"] is required with mode "EXPLICIT"')
     return {"mode": "EXPLICIT", "permissions": list(permissions)}
 
 

@@ -265,10 +265,7 @@ class Tunnel:
                 probe.settimeout(0.5)
                 probe.connect(("127.0.0.1", port))
                 probe.close()
-                raise OSError(
-                    f"Port {port} is already in use by another service. "
-                    f"Choose a different local_port."
-                )
+                raise OSError(f"Port {port} is already in use by another service. Choose a different local_port.")
             except ConnectionRefusedError:
                 pass  # nothing listening — safe to bind
             except OSError as e:
@@ -288,9 +285,7 @@ class Tunnel:
         self._server_socket.listen(128)
         self._local_port = self._server_socket.getsockname()[1]
 
-        self._accept_thread = threading.Thread(
-            target=self._accept_loop, daemon=True, name="tunnel-accept"
-        )
+        self._accept_thread = threading.Thread(target=self._accept_loop, daemon=True, name="tunnel-accept")
         self._accept_thread.start()
 
     def _connect(self) -> None:
@@ -348,9 +343,7 @@ class Tunnel:
                         )
                         time.sleep(delay)
 
-            raise TunnelError(
-                f"tunnel: reconnect failed after {self._max_reconnects} attempts"
-            ) from last_err
+            raise TunnelError(f"tunnel: reconnect failed after {self._max_reconnects} attempts") from last_err
 
     def close(self) -> None:
         """Shut down the tunnel, closing all connections."""

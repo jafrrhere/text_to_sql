@@ -146,15 +146,9 @@ def convert_runs_to_test(
 
     examples = list(client.list_examples(dataset_name=dataset_name))
     run_to_example_map = {e.source_run_id: e.id for e in examples}
-    dataset_version = (
-        examples[0].modified_at if examples[0].modified_at else examples[0].created_at
-    )
+    dataset_version = examples[0].modified_at if examples[0].modified_at else examples[0].created_at
 
-    to_create = [
-        run_dict
-        for root_run in runs_to_copy
-        for run_dict in _convert_root_run(root_run, run_to_example_map)
-    ]
+    to_create = [run_dict for root_run in runs_to_copy for run_dict in _convert_root_run(root_run, run_to_example_map)]
 
     project = client.create_project(
         project_name=test_project_name,
@@ -188,9 +182,7 @@ def _load_nested_traces(project_name: str, client: Client) -> list[ls_schemas.Ru
     # create_feedback() rather than list_runs()'s runs.query().
     with suppress_deprecation_warning():
         runs = client.list_runs(project_name=project_name)
-    treemap: collections.defaultdict[uuid.UUID, list[ls_schemas.Run]] = (
-        collections.defaultdict(list)
-    )
+    treemap: collections.defaultdict[uuid.UUID, list[ls_schemas.Run]] = collections.defaultdict(list)
     results = []
     all_runs = {}
     for run in runs:
@@ -253,14 +245,10 @@ def compute_test_metrics(
         elif callable(func):
             evaluators_.append(ls_eval.run_evaluator(func))
         else:
-            raise NotImplementedError(
-                f"Evaluation not yet implemented for evaluator of type {type(func)}"
-            )
+            raise NotImplementedError(f"Evaluation not yet implemented for evaluator of type {type(func)}")
     client = client or rt.get_cached_client()
     traces = _load_nested_traces(project_name, client)
     with ContextThreadPoolExecutor(max_workers=max_concurrency) as executor:
-        results = executor.map(
-            client.evaluate_run, *zip(*_outer_product(traces, evaluators_))
-        )
+        results = executor.map(client.evaluate_run, *zip(*_outer_product(traces, evaluators_)))
     for _ in results:
         pass

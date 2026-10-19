@@ -44,9 +44,7 @@ def normalize_gemini_usage_metadata(usage: Any) -> dict[str, Any] | None:
                 break
 
     input_details: dict[str, int] = {}
-    if (
-        audio := _audio_tokens(getattr(usage, "prompt_tokens_details", None))
-    ) is not None:
+    if (audio := _audio_tokens(getattr(usage, "prompt_tokens_details", None))) is not None:
         input_details["audio"] = audio
     if isinstance(cached := getattr(usage, "cached_content_token_count", None), int):
         input_details["cache_read"] = cached
